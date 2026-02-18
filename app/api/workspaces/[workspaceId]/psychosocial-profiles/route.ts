@@ -52,6 +52,7 @@ const psychosocialSchema = z.object({
   hopeMotivation: z.boolean().default(false),
   photoConsent: z.boolean().default(false),
   photoReference: z.string().max(250).optional().nullable(),
+  gdprConsent: z.boolean().default(false),
   observations: z.string().max(1000).optional().nullable(),
   signatureResponsible: z.string().max(120).optional().nullable()
 });
@@ -304,6 +305,8 @@ export async function POST(request: Request, { params }: Params) {
         hopeMotivation: parsed.hopeMotivation,
         photoConsent: parsed.photoConsent,
         photoReference,
+        gdprConsent: parsed.gdprConsent,
+        gdprConsentDate: parsed.gdprConsent ? new Date() : null,
         contextPersonal: generated.contextPersonal,
         emotionalProfile: generated.emotionalProfile,
         mainNeeds: generated.mainNeeds,
@@ -312,6 +315,15 @@ export async function POST(request: Request, { params }: Params) {
         supportPlan: generated.supportPlan,
         observations,
         signatureResponsible
+      }
+    });
+
+    await prisma.profileAccessLog.create({
+      data: {
+        profileId: profile.id,
+        actorId: user.id,
+        action: 'PROFILE_CREATED',
+        metadata: { provider: parsed.provider, fallback: usedFallback }
       }
     });
 

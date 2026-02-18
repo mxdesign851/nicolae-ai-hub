@@ -38,6 +38,14 @@ export async function GET(_: Request, { params }: Params) {
       throw new HttpError(404, 'Profilul nu a fost gasit');
     }
 
+    await prisma.profileAccessLog.create({
+      data: {
+        profileId: profile.id,
+        actorId: user.id,
+        action: 'PROFILE_PDF_DOWNLOADED'
+      }
+    });
+
     const sections = [
       {
         title: 'Date identificare',
@@ -45,11 +53,12 @@ export async function GET(_: Request, { params }: Params) {
           `Beneficiar: ${profile.internalName} | Varsta: ${profile.age} | Sex: ${profile.sex}`,
           `Locatie/Centru: ${profile.locationCenter}`,
           `Data evaluarii: ${profile.assessmentDate.toLocaleDateString('ro-RO')}`,
-          `Responsabil: ${profile.responsiblePerson}`
+          `Responsabil: ${profile.responsiblePerson}`,
+          `Acord GDPR: ${boolLabel(profile.gdprConsent)}${profile.gdprConsentDate ? ` (${profile.gdprConsentDate.toLocaleDateString('ro-RO')})` : ''}`
         ]
       },
       {
-        title: 'Rezumat social si medical',
+        title: 'Rezumat social',
         lines: [
           `Familie: ${FAMILY_SUPPORT_LABELS[profile.familySupport]} | Locuire: ${HOUSING_STATUS_LABELS[profile.housingStatus]}`,
           `Contact cu familia: ${profile.familyContactFrequency || 'Nespecificat'}`,
@@ -64,29 +73,33 @@ export async function GET(_: Request, { params }: Params) {
         lines: [
           profile.contextPersonal,
           profile.emotionalProfile,
-          `Comunicare: ${COMMUNICATION_LABELS[profile.communicationLevel]} | Stres: ${STRESS_LABELS[profile.stressReaction]} | Relationare: ${
-            RELATIONSHIP_LABELS[profile.relationshipStyle]
-          }`,
-          `Autonomie: ${AUTONOMY_LABELS[profile.autonomyLevel]} | Somn: ${SLEEP_LABELS[profile.sleepQuality]} | Apetit: ${
-            APPETITE_LABELS[profile.appetite]
-          }`,
-          `Indicatori emotionali observati: tristete ${boolLabel(profile.sadnessFrequent)}, anxietate ${boolLabel(
-            profile.anxiety
-          )}, furie ${boolLabel(profile.anger)}, apatie ${boolLabel(profile.apathy)}, speranta/motivatie ${boolLabel(
-            profile.hopeMotivation
-          )}.`
+          `Comunicare: ${COMMUNICATION_LABELS[profile.communicationLevel]} | Stres: ${STRESS_LABELS[profile.stressReaction]} | Relationare: ${RELATIONSHIP_LABELS[profile.relationshipStyle]}`,
+          `Autonomie: ${AUTONOMY_LABELS[profile.autonomyLevel]} | Somn: ${SLEEP_LABELS[profile.sleepQuality]} | Apetit: ${APPETITE_LABELS[profile.appetite]}`,
+          `Indicatori emotionali observati: tristete ${boolLabel(profile.sadnessFrequent)}, anxietate ${boolLabel(profile.anxiety)}, furie ${boolLabel(profile.anger)}, apatie ${boolLabel(profile.apathy)}, speranta/motivatie ${boolLabel(profile.hopeMotivation)}.`
         ]
+      },
+      {
+        title: 'Nevoi principale',
+        lines: profile.mainNeeds.length ? profile.mainNeeds.map((line) => `- ${line}`) : ['- Fara nevoi identificate.']
+      },
+      {
+        title: 'Riscuri identificate',
+        lines: profile.risks.length ? profile.risks.map((line) => `- ${line}`) : ['- Fara riscuri identificate.']
       },
       {
         title: 'Recomandari pentru personal',
         lines: profile.staffRecommendations.length ? profile.staffRecommendations.map((line) => `- ${line}`) : ['- Fara recomandari.']
       },
       {
-        title: 'Plan de sprijin / observatii / semnatura',
+        title: 'Plan de sprijin',
+        lines: profile.supportPlan.length ? profile.supportPlan.map((line) => `- ${line}`) : ['- Fara plan definit.']
+      },
+      {
+        title: 'Observatii / Semnatura',
         lines: [
-          ...(profile.supportPlan.length ? profile.supportPlan.map((line) => `- ${line}`) : ['- Fara plan definit.']),
           `Observatii: ${profile.observations || 'Nespecificat'}`,
-          `Semnatura responsabil: ${profile.signatureResponsible || profile.responsiblePerson}`
+          `Semnatura responsabil: ${profile.signatureResponsible || profile.responsiblePerson}`,
+          `Versiune document: ${profile.version}`
         ]
       }
     ];
@@ -94,9 +107,9 @@ export async function GET(_: Request, { params }: Params) {
     const pdfBytes = await createSinglePagePdf({
       title: 'Fisa psihosociala orientativa',
       subtitle:
-        'Document de sprijin pentru echipa. Nu reprezinta diagnostic medical si nu inlocuieste evaluarea clinica specializata.',
+        'Document de sprijin pentru echipa. Nu reprezinta diagnostic medical si nu inlocuieste evaluarea clinica specializata. Confidential - GDPR.',
       sections,
-      footerNote: `Generat la ${new Date().toLocaleString('ro-RO')} din aplicatia interna.`
+      footerNote: `Generat la ${new Date().toLocaleString('ro-RO')} din aplicatia interna. Versiune: ${profile.version}`
     });
 
     return new NextResponse(Buffer.from(pdfBytes), {
