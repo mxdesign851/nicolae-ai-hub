@@ -72,8 +72,8 @@ export function LandingPageView() {
 
   return (
     <main className="min-h-screen">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-        <Logo />
+      <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-8">
+        <Logo size="lg" />
         <nav className="hidden items-center gap-5 text-sm text-slate-300 md:flex">
           <Link href="#features" className="hover:text-white">
             Features
@@ -98,15 +98,15 @@ export function LandingPageView() {
         </div>
       </header>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-10 px-6 pb-12 pt-8 md:grid-cols-[1.2fr_1fr]">
-        <div className="space-y-6">
-          <span className="badge border-blue-500/40 bg-blue-500/10 text-blue-200">
+      <section className="mx-auto grid w-full max-w-7xl gap-12 px-6 pb-16 pt-4 md:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-7">
+          <span className="badge border-blue-500/40 bg-blue-500/10 px-3 py-1 text-blue-200">
             Built for agencies and multi-location SaaS operators
           </span>
-          <h1 className="text-4xl font-bold leading-tight md:text-6xl">
+          <h1 className="text-5xl font-bold leading-tight md:text-7xl">
             The AI Review Reply Manager that turns customer feedback into growth.
           </h1>
-          <p className="max-w-2xl text-lg text-slate-300">
+          <p className="max-w-2xl text-xl leading-8 text-slate-300">
             ReviewPilot helps teams draft better replies in seconds, enforce approval quality, and prove outcomes with
             analytics. One platform for inbox operations, brand consistency, exports, and subscriptions.
           </p>
@@ -125,9 +125,9 @@ export function LandingPageView() {
               ['12,000+', 'monthly replies generated'],
               ['92%', 'approval SLA hit rate']
             ].map(([metric, description]) => (
-              <div key={metric} className="card p-4">
-                <p className="text-2xl font-semibold">{metric}</p>
-                <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">{description}</p>
+              <div key={metric} className="card p-6">
+                <p className="text-3xl font-semibold">{metric}</p>
+                <p className="mt-2 text-xs uppercase tracking-wide text-slate-400">{description}</p>
               </div>
             ))}
           </div>
@@ -137,7 +137,7 @@ export function LandingPageView() {
             <p className="text-sm text-slate-400">Live workflow terminal</p>
             <span className="badge border-emerald-500/30 bg-emerald-500/10 text-emerald-200">Connected</span>
           </div>
-          <div className="space-y-3 p-4 font-mono text-xs text-slate-300">
+          <div className="space-y-4 p-6 font-mono text-xs text-slate-300">
             <p className="text-slate-400">$ reviewpilot generate --provider openai --length medium --escalation on</p>
             <p>
               [ok] Review imported from GOOGLE - Downtown Store
@@ -146,7 +146,7 @@ export function LandingPageView() {
               <br />
               [ok] Tags suggested: slow-service, order-accuracy
             </p>
-            <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-4">
               <p className="text-slate-400">Draft output:</p>
               <p className="mt-2 leading-5">
                 Thank you for sharing this feedback. We are truly sorry your order was delayed and incomplete. Please contact
@@ -158,51 +158,51 @@ export function LandingPageView() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-6 py-2">
-        <div className="card p-4">
+      <section className="mx-auto w-full max-w-7xl px-6 py-2">
+        <div className="card p-5">
           <p className="text-center text-xs uppercase tracking-[0.14em] text-slate-400">
             Trusted workflow model: Manual imports first, API connectors next
           </p>
         </div>
       </section>
 
-      <section id="features" className="mx-auto w-full max-w-6xl px-6 py-10">
-        <h2 className="text-2xl font-semibold md:text-3xl">Sales-ready feature set, not a toy dashboard</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <section id="features" className="mx-auto w-full max-w-7xl px-6 py-14">
+        <h2 className="text-3xl font-semibold md:text-4xl">Sales-ready feature set, not a toy dashboard</h2>
+        <div className="mt-8 grid gap-6 md:grid-cols-3">
           {featureBlocks.map((feature) => (
-            <article key={feature.title} className="card p-5">
-              <h3 className="text-lg font-semibold">{feature.title}</h3>
-              <p className="mt-2 text-sm text-slate-400">{feature.description}</p>
+            <article key={feature.title} className="card p-6">
+              <h3 className="text-xl font-semibold">{feature.title}</h3>
+              <p className="mt-3 text-base leading-7 text-slate-400">{feature.description}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-6 py-4">
-        <div className="card p-6">
-          <h2 className="text-2xl font-semibold">How teams win with ReviewPilot in 3 steps</h2>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
+      <section className="mx-auto w-full max-w-7xl px-6 py-6">
+        <div className="card p-8">
+          <h2 className="text-3xl font-semibold">How teams win with ReviewPilot in 3 steps</h2>
+          <div className="mt-6 grid gap-6 md:grid-cols-3">
             {[
               ['1. Import', 'Add reviews manually or upload CSV by source and location in minutes.'],
               ['2. Draft and approve', 'Generate AI replies, edit with brand voice guardrails, then approve.'],
               ['3. Publish and report', 'Export responses and show clients analytics progress each week.']
             ].map(([title, desc]) => (
-              <div key={title} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-                <p className="font-semibold">{title}</p>
-                <p className="mt-2 text-sm text-slate-400">{desc}</p>
+              <div key={title} className="rounded-xl border border-slate-800 bg-slate-950/40 p-6">
+                <p className="text-lg font-semibold">{title}</p>
+                <p className="mt-3 text-base leading-7 text-slate-400">{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="pricing" className="mx-auto w-full max-w-6xl px-6 py-10">
-        <h2 className="text-2xl font-semibold md:text-3xl">Packages built to convert and scale</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <section id="pricing" className="mx-auto w-full max-w-7xl px-6 py-14">
+        <h2 className="text-3xl font-semibold md:text-4xl">Packages built to convert and scale</h2>
+        <div className="mt-8 grid gap-6 md:grid-cols-3">
           {pricing.map((plan) => (
             <article
               key={plan.name}
-              className={`card p-5 ${plan.name === 'Pro' ? 'border-blue-500/50 ring-2 ring-blue-500/20' : ''}`}
+              className={`card p-7 ${plan.name === 'Pro' ? 'border-blue-500/50 ring-2 ring-blue-500/20' : ''}`}
             >
               <div className="flex items-center justify-between">
                 <p className="text-xl font-semibold">{plan.name}</p>
@@ -214,8 +214,8 @@ export function LandingPageView() {
                 {plan.price}
                 <span className="text-sm font-normal text-slate-400">/mo</span>
               </p>
-              <p className="mt-1 text-sm text-slate-400">{plan.subtitle}</p>
-              <ul className="mt-4 space-y-2 text-sm text-slate-200">
+              <p className="mt-2 text-base text-slate-400">{plan.subtitle}</p>
+              <ul className="mt-5 space-y-3 text-base text-slate-200">
                 {plan.features.map((feature) => (
                   <li key={feature}>- {feature}</li>
                 ))}
@@ -230,20 +230,20 @@ export function LandingPageView() {
         </div>
       </section>
 
-      <section id="testimonials" className="mx-auto w-full max-w-6xl px-6 py-4">
-        <h2 className="text-2xl font-semibold md:text-3xl">Testimonials from operators and founders</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <section id="testimonials" className="mx-auto w-full max-w-7xl px-6 py-8">
+        <h2 className="text-3xl font-semibold md:text-4xl">Testimonials from operators and founders</h2>
+        <div className="mt-8 grid gap-6 md:grid-cols-3">
           {testimonials.map((item) => (
-            <article key={item.name} className="card p-5">
-              <p className="text-sm leading-6 text-slate-200">&quot;{item.quote}&quot;</p>
-              <p className="mt-4 font-semibold">{item.name}</p>
+            <article key={item.name} className="card p-7">
+              <p className="text-base leading-8 text-slate-200">&quot;{item.quote}&quot;</p>
+              <p className="mt-5 text-lg font-semibold">{item.name}</p>
               <p className="text-xs uppercase tracking-wide text-slate-400">{item.role}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section id="blog" className="mx-auto w-full max-w-6xl px-6 py-10">
+      <section id="blog" className="mx-auto w-full max-w-7xl px-6 py-12">
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold md:text-3xl">Latest blog insights</h2>
@@ -255,16 +255,16 @@ export function LandingPageView() {
             View all posts
           </Link>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-8 grid gap-6 md:grid-cols-3">
           {BLOG_POSTS.map((post) => (
-            <article key={post.slug} className="card p-5">
+            <article key={post.slug} className="card p-6">
               <div className="flex items-center justify-between">
                 <span className="badge">{post.category}</span>
                 <span className="text-xs text-slate-400">{post.readTime}</span>
               </div>
-              <h3 className="mt-4 text-lg font-semibold">{post.title}</h3>
-              <p className="mt-2 text-sm text-slate-400">{post.excerpt}</p>
-              <div className="mt-4">
+              <h3 className="mt-5 text-xl font-semibold">{post.title}</h3>
+              <p className="mt-3 text-base leading-7 text-slate-400">{post.excerpt}</p>
+              <div className="mt-5">
                 <Link href={`/blog/${post.slug}`} className="text-sm font-medium text-blue-300">
                   Read article {'->'}
                 </Link>
@@ -274,10 +274,10 @@ export function LandingPageView() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-6 py-4">
-        <div className="card p-6">
-          <h2 className="text-2xl font-semibold">Get growth tactics every week</h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-400">
+      <section className="mx-auto w-full max-w-7xl px-6 py-8">
+        <div className="card p-8">
+          <h2 className="text-3xl font-semibold">Get growth tactics every week</h2>
+          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-400">
             Join the ReviewPilot newsletter for new conversion playbooks, review response templates, and AI workflow
             optimization ideas.
           </p>
@@ -287,7 +287,7 @@ export function LandingPageView() {
         </div>
       </section>
 
-      <footer className="mx-auto mt-10 w-full max-w-6xl border-t border-slate-800 px-6 py-8 text-sm text-slate-400">
+      <footer className="mx-auto mt-10 w-full max-w-7xl border-t border-slate-800 px-6 py-8 text-sm text-slate-400">
         <div className="grid gap-8 md:grid-cols-5">
           <div className="md:col-span-2">
             <Logo />

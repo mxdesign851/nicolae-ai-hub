@@ -14,13 +14,14 @@ type DemoAccount = {
 type SignInFormProps = {
   callbackUrl?: string;
   demoAccounts?: DemoAccount[];
+  initialError?: string | null;
 };
 
-export function SignInForm({ callbackUrl = '/app', demoAccounts = [] }: SignInFormProps) {
+export function SignInForm({ callbackUrl = '/app', demoAccounts = [], initialError = null }: SignInFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 

@@ -2,7 +2,28 @@ import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { SignInForm } from '@/components/auth/sign-in-form';
 
-export default function SignInPage({ searchParams }: { searchParams?: { callbackUrl?: string } }) {
+function mapAuthError(error?: string) {
+  if (!error) return null;
+  const readable: Record<string, string> = {
+    CredentialsSignin: 'Invalid login credentials. Check your email and password.',
+    AccessDenied: 'Access denied. Contact your administrator.',
+    OAuthSignin: 'OAuth sign-in failed. Please try again.',
+    OAuthCallback: 'OAuth callback failed. Please try again.',
+    OAuthCreateAccount: 'Unable to create your OAuth account.',
+    EmailCreateAccount: 'Unable to create your email account.',
+    Callback: 'Authentication could not be completed.',
+    OAuthAccountNotLinked: 'This OAuth account is not linked to your email.',
+    SessionRequired: 'Your session has expired. Please sign in again.',
+    Configuration: 'Authentication configuration is incomplete. Check NEXTAUTH variables.'
+  };
+  return readable[error] ?? 'An authentication error occurred.';
+}
+
+export default function SignInPage({
+  searchParams
+}: {
+  searchParams?: { callbackUrl?: string; error?: string };
+}) {
   const demoAccounts = [
     {
       label: 'Super Admin',
@@ -23,11 +44,12 @@ export default function SignInPage({ searchParams }: { searchParams?: { callback
       badge: 'PRO PLAN'
     }
   ];
+  const authError = mapAuthError(searchParams?.error);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl items-center px-6 py-10">
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-10">
       <div className="grid w-full gap-8 md:grid-cols-[1fr_440px]">
-        <section className="space-y-4">
+        <section className="space-y-5">
           <Logo />
           <h1 className="text-4xl font-semibold leading-tight">Welcome back to ReviewPilot</h1>
           <p className="max-w-xl text-slate-300">
@@ -45,10 +67,17 @@ export default function SignInPage({ searchParams }: { searchParams?: { callback
               Use the quick sign-in buttons on the right to load Super Admin and Premium demo credentials.
             </p>
           </div>
+          {authError ? (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">{authError}</div>
+          ) : null}
         </section>
         <section className="card p-6">
           <h2 className="mb-4 text-2xl font-semibold">Sign in</h2>
-          <SignInForm callbackUrl={searchParams?.callbackUrl || '/app'} demoAccounts={demoAccounts} />
+          <SignInForm
+            callbackUrl={searchParams?.callbackUrl || '/app'}
+            demoAccounts={demoAccounts}
+            initialError={authError}
+          />
           <p className="mt-4 text-center text-sm text-slate-400">
             No account yet?{' '}
             <Link href="/sign-up" className="text-blue-300">

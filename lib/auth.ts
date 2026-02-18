@@ -14,7 +14,8 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || fallbackSecret,
   session: { strategy: 'jwt' },
   pages: {
-    signIn: '/sign-in'
+    signIn: '/sign-in',
+    error: '/sign-in'
   },
   providers: [
     CredentialsProvider({
