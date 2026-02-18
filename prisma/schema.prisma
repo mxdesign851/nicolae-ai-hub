@@ -146,6 +146,11 @@ enum AuditAction {
   MEMBER_ROLE_UPDATED
   MEMBER_REMOVED
   SUBSCRIPTION_UPDATED
+  PROFILE_CREATED
+  PROFILE_UPDATED
+  PROFILE_DELETED
+  PROFILE_VIEWED
+  PROFILE_PDF_DOWNLOADED
 }
 
 model User {
@@ -163,6 +168,7 @@ model User {
   auditLogs       ReviewAuditLog[]
   medicationPurchases MedicationPurchase[]
   psychosocialProfiles PsychosocialProfile[] @relation("PsychosocialCreatedBy")
+  profileAccessLogs ProfileAccessLog[]
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 }
@@ -432,6 +438,8 @@ model PsychosocialProfile {
   hopeMotivation            Boolean            @default(false)
   photoConsent              Boolean            @default(false)
   photoReference            String?
+  gdprConsent               Boolean            @default(false)
+  gdprConsentDate           DateTime?
   contextPersonal           String
   emotionalProfile          String
   mainNeeds                 String[]           @default([])
@@ -440,11 +448,27 @@ model PsychosocialProfile {
   supportPlan               String[]           @default([])
   observations              String?
   signatureResponsible      String?
+  version                   Int                @default(1)
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
   workspace                 Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy                 User?              @relation("PsychosocialCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  accessLogs                ProfileAccessLog[]
 
   @@index([workspaceId, assessmentDate])
   @@index([workspaceId, createdAt])
+}
+
+model ProfileAccessLog {
+  id          String               @id @default(cuid())
+  profileId   String
+  actorId     String
+  action      AuditAction
+  metadata    Json?
+  createdAt   DateTime             @default(now())
+  profile     PsychosocialProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  actor       User                 @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt])
+  @@index([actorId, createdAt])
 }
