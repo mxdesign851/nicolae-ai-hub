@@ -21,8 +21,8 @@ export default async function PsychosocialPage({ params }: { params: { workspace
         <p className="mt-1 text-sm text-slate-400">
           Modul orientativ de sprijin pentru personal: monitorizare, recomandari comportamentale si fisa PDF pentru dosar.
         </p>
-        <p className="mt-2 text-xs text-slate-500">
-          Generator AI activ pe OpenAI / Claude / Gemini. Seteaza cheile API in fisierul de mediu al aplicatiei.
+        <p className="mt-1 text-xs text-slate-500">
+          Aplicatia nu pune diagnostice. Ofera profil orientativ de sprijin, ajuta personalul sa stie cum sa se comporte, monitorizeaza si creeaza fise clare.
         </p>
       </section>
       <PsychosocialProfileManager
@@ -30,6 +30,7 @@ export default async function PsychosocialPage({ params }: { params: { workspace
         initialProfiles={profiles.map((profile) => ({
           ...profile,
           assessmentDate: profile.assessmentDate.toISOString(),
+          gdprConsentDate: profile.gdprConsentDate?.toISOString() ?? null,
           createdAt: profile.createdAt.toISOString(),
           updatedAt: profile.updatedAt.toISOString()
         }))}

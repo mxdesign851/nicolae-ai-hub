@@ -163,6 +163,12 @@ function serializeProfile(profile: {
   responsiblePerson: string;
   familySupport: string;
   housingStatus: string;
+  familyContactFrequency: string | null;
+  institutionalizationHistory: string | null;
+  knownDiseases: boolean | null;
+  medicationInfo: string | null;
+  limitations: string | null;
+  previousPsychEvaluation: boolean | null;
   communicationLevel: string;
   stressReaction: string;
   relationshipStyle: string;
@@ -174,6 +180,10 @@ function serializeProfile(profile: {
   anger: boolean;
   apathy: boolean;
   hopeMotivation: boolean;
+  photoConsent: boolean;
+  photoReference: string | null;
+  gdprConsent: boolean;
+  gdprConsentDate: Date | null;
   contextPersonal: string;
   emotionalProfile: string;
   mainNeeds: string[];
@@ -182,12 +192,14 @@ function serializeProfile(profile: {
   supportPlan: string[];
   observations: string | null;
   signatureResponsible: string | null;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }) {
   return {
     ...profile,
     assessmentDate: profile.assessmentDate.toISOString(),
+    gdprConsentDate: profile.gdprConsentDate?.toISOString() ?? null,
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString()
   };
