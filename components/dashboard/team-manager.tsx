@@ -10,9 +10,9 @@ type Member = {
     id: string;
     name: string | null;
     email: string;
-    createdAt?: string;
+    createdAt?: string | Date;
   };
-  joinedAt?: string;
+  joinedAt?: string | Date;
 };
 
 type Props = {
@@ -27,7 +27,11 @@ export function TeamManager({ workspaceId, members, canManageRoles, canInvite }:
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [invite, setInvite] = useState({ email: '', name: '', role: Role.MEMBER });
+  const [invite, setInvite] = useState<{ email: string; name: string; role: Role }>({
+    email: '',
+    name: '',
+    role: Role.MEMBER
+  });
 
   return (
     <section className="grid gap-5 lg:grid-cols-[1fr_320px]">

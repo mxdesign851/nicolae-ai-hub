@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { SignInForm } from '@/components/auth/sign-in-form';
 
-export default function SignInPage() {
+export default function SignInPage({ searchParams }: { searchParams?: { callbackUrl?: string } }) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl items-center px-6 py-10">
       <div className="grid w-full gap-8 md:grid-cols-[1fr_440px]">
@@ -21,7 +21,7 @@ export default function SignInPage() {
         </section>
         <section className="card p-6">
           <h2 className="mb-4 text-2xl font-semibold">Sign in</h2>
-          <SignInForm />
+          <SignInForm callbackUrl={searchParams?.callbackUrl || '/app'} />
           <p className="mt-4 text-center text-sm text-slate-400">
             No account yet?{' '}
             <Link href="/sign-up" className="text-blue-300">

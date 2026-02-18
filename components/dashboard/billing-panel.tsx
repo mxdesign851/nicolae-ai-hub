@@ -1,6 +1,6 @@
 'use client';
 
-import { Plan, Subscription, SubscriptionStatus } from '@prisma/client';
+import { Plan, Subscription } from '@prisma/client';
 import { useState, useTransition } from 'react';
 
 type Props = {

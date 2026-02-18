@@ -124,7 +124,7 @@ export function BrandVoiceForm({ workspaceId, workspaceVoice, locationVoices, lo
           <textarea className="input min-h-[110px]" value={doList} onChange={(event) => setDoList(event.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-slate-300">Don't list (one per line)</label>
+          <label className="mb-1 block text-sm text-slate-300">Dont list (one per line)</label>
           <textarea className="input min-h-[110px]" value={dontList} onChange={(event) => setDontList(event.target.value)} />
         </div>
         <div>

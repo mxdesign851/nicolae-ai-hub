@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Role } from '@prisma/client';
+import { Role, Sentiment } from '@prisma/client';
 import { z } from 'zod';
 import { buildTagSentimentPrompt, generateText, parseTagSentimentResponse } from '@/lib/ai';
 import { requireApiUserOrThrow } from '@/lib/api-auth';
@@ -38,7 +38,7 @@ export async function POST(request: Request, { params }: Params) {
     const generated = await generateText({ provider: parsed.provider, prompt });
     const parsedResult = parseTagSentimentResponse(generated.text);
     const tags = sanitizeTags(parsedResult.tags);
-    const sentiment = parsedResult.sentiment;
+    const sentiment = parsedResult.sentiment as Sentiment;
 
     const updated = await prisma.review.update({
       where: { id: review.id },

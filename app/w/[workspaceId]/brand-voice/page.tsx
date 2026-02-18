@@ -21,7 +21,7 @@ export default async function BrandVoicePage({ params }: { params: { workspaceId
       <section className="card p-5">
         <h1 className="text-2xl font-semibold">Brand Voice</h1>
         <p className="mt-1 text-sm text-slate-400">
-          Configure tone, do/don't guidance, banned words, and sign-off defaults at workspace or location level.
+          Configure tone, do-not guidance, banned words, and sign-off defaults at workspace or location level.
         </p>
         {!canUseBrandVoice ? (
           <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
