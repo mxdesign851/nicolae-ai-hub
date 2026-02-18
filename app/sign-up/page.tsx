@@ -8,7 +8,7 @@ export default function SignUpPage() {
       <div className="grid w-full gap-8 md:grid-cols-[1fr_440px]">
         <section className="space-y-4">
           <Logo />
-          <h1 className="text-4xl font-semibold leading-tight">Create your ReviewPilot workspace</h1>
+          <h1 className="text-4xl font-semibold leading-tight">Create your ReplyZen workspace</h1>
           <p className="max-w-xl text-slate-300">
             Start on Free, import customer reviews manually or via CSV, generate replies with AI, and scale to Pro/Agency when
             your volume grows.

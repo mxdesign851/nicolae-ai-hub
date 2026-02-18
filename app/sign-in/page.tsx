@@ -51,7 +51,7 @@ export default function SignInPage({
       <div className="grid w-full gap-8 md:grid-cols-[1fr_440px]">
         <section className="space-y-5">
           <Logo />
-          <h1 className="text-4xl font-semibold leading-tight">Welcome back to ReviewPilot</h1>
+          <h1 className="text-4xl font-semibold leading-tight">Welcome back to ReplyZen</h1>
           <p className="max-w-xl text-slate-300">
             Sign in to manage review pipelines, AI-generated replies, approval workflows, and multi-tenant operations from one
             dashboard.

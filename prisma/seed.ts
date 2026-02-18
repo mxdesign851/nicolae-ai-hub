@@ -215,14 +215,14 @@ async function main() {
   });
 
   const proWorkspace = await ensureWorkspace({
-    slug: 'reviewpilot-demo-pro',
-    name: 'ReviewPilot Demo Workspace',
+    slug: 'replyzen-demo-pro',
+    name: 'ReplyZen Demo Workspace',
     plan: Plan.PRO,
     aiGenerationsUsed: 12
   });
   const premiumWorkspace = await ensureWorkspace({
-    slug: 'reviewpilot-demo-premium',
-    name: 'ReviewPilot Premium Demo',
+    slug: 'replyzen-demo-premium',
+    name: 'ReplyZen Premium Demo',
     plan: Plan.AGENCY,
     aiGenerationsUsed: 384
   });
@@ -252,7 +252,7 @@ async function main() {
         dontList: ['Do not blame the customer', 'Avoid legal promises'],
         examples: ['Thanks for sharing your feedback - we appreciate your visit.'],
         bannedWords: ['cheap', 'fault'],
-        signOff: '- The ReviewPilot Team'
+        signOff: '- The ReplyZen Team'
       },
       create: {
         workspaceId: proWorkspace.id,
@@ -261,7 +261,7 @@ async function main() {
         dontList: ['Do not blame the customer', 'Avoid legal promises'],
         examples: ['Thanks for sharing your feedback - we appreciate your visit.'],
         bannedWords: ['cheap', 'fault'],
-        signOff: '- The ReviewPilot Team'
+        signOff: '- The ReplyZen Team'
       }
     }),
     prisma.brandVoice.upsert({
@@ -272,7 +272,7 @@ async function main() {
         dontList: ['Do not blame customer', 'Do not overpromise'],
         examples: ['Thanks for the detailed review - we appreciate your feedback.'],
         bannedWords: ['cheap', 'fault', 'impossible'],
-        signOff: '- ReviewPilot Premium Team'
+        signOff: '- ReplyZen Premium Team'
       },
       create: {
         workspaceId: premiumWorkspace.id,
@@ -281,7 +281,7 @@ async function main() {
         dontList: ['Do not blame customer', 'Do not overpromise'],
         examples: ['Thanks for the detailed review - we appreciate your feedback.'],
         bannedWords: ['cheap', 'fault', 'impossible'],
-        signOff: '- ReviewPilot Premium Team'
+        signOff: '- ReplyZen Premium Team'
       }
     })
   ]);

@@ -18,7 +18,7 @@ export default function BlogIndexPage() {
       </header>
 
       <section className="mt-10">
-        <h1 className="text-4xl font-semibold">ReviewPilot Blog</h1>
+        <h1 className="text-4xl font-semibold">ReplyZen Blog</h1>
         <p className="mt-2 max-w-2xl text-slate-400">
           Tactical guides for AI review operations, brand voice systems, and subscription-ready SaaS workflows.
         </p>

@@ -2,7 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'ReviewPilot | AI Review Reply Manager',
+  title: 'ReplyZen | AI Review Reply Manager',
   description: 'Multi-tenant SaaS for AI-generated customer review replies with approvals, analytics, and billing.',
   metadataBase: new URL('https://reply-zen.com')
 };

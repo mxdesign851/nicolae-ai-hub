@@ -1,8 +1,8 @@
-# ReviewPilot (ReplyZen)
+# ReplyZen
 
 Production-ready multi-tenant SaaS for AI-powered customer review reply workflows.
 
-- Brand: **ReviewPilot**
+- Brand: **ReplyZen**
 - Domain branding: **reply-zen.com**
 - Stack: **Next.js 14 App Router + React 18 + TypeScript + PostgreSQL + Prisma + Tailwind + NextAuth**
 
@@ -10,7 +10,7 @@ Production-ready multi-tenant SaaS for AI-powered customer review reply workflow
 
 ## What this app does
 
-ReviewPilot helps businesses and agencies manage imported reviews (Google/Facebook/Yelp/Trustpilot/manual), generate high-quality AI replies, apply approval workflows, and track plan-based usage with Stripe + PayPal subscriptions.
+ReplyZen helps businesses and agencies manage imported reviews (Google/Facebook/Yelp/Trustpilot/manual), generate high-quality AI replies, apply approval workflows, and track plan-based usage with Stripe + PayPal subscriptions.
 
 ### Included features
 

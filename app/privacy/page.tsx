@@ -13,8 +13,8 @@ export default function PrivacyPage() {
       <article className="card space-y-4 p-6 text-sm leading-6 text-slate-200">
         <h1 className="text-2xl font-semibold">Privacy Policy (Template)</h1>
         <p>
-          ReviewPilot (ReplyZen) is committed to protecting customer and workspace data. This template should be reviewed by
-          legal counsel before production use.
+          ReplyZen is committed to protecting customer and workspace data. This template should be reviewed by legal counsel
+          before production use.
         </p>
         <h2 className="text-lg font-semibold">Data we process</h2>
         <ul className="list-disc space-y-1 pl-5">

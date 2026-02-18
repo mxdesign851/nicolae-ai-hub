@@ -13,8 +13,8 @@ export default function TermsPage() {
       <article className="card space-y-4 p-6 text-sm leading-6 text-slate-200">
         <h1 className="text-2xl font-semibold">Terms of Service (Template)</h1>
         <p>
-          These terms govern usage of ReviewPilot (ReplyZen). This template is not legal advice and should be reviewed before
-          commercial launch.
+          These terms govern usage of ReplyZen. This template is not legal advice and should be reviewed before commercial
+          launch.
         </p>
         <h2 className="text-lg font-semibold">Acceptable use</h2>
         <ul className="list-disc space-y-1 pl-5">

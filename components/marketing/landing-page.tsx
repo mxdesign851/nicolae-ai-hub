@@ -54,7 +54,7 @@ export function LandingPageView() {
 
   const testimonials = [
     {
-      quote: 'ReviewPilot cut our response time from two days to twenty minutes.',
+      quote: 'ReplyZen cut our response time from two days to twenty minutes.',
       name: 'Irina M.',
       role: 'Agency Operator'
     },
@@ -107,7 +107,7 @@ export function LandingPageView() {
             The AI Review Reply Manager that turns customer feedback into growth.
           </h1>
           <p className="max-w-2xl text-xl leading-8 text-slate-300">
-            ReviewPilot helps teams draft better replies in seconds, enforce approval quality, and prove outcomes with
+            ReplyZen helps teams draft better replies in seconds, enforce approval quality, and prove outcomes with
             analytics. One platform for inbox operations, brand consistency, exports, and subscriptions.
           </p>
           <div className="flex flex-wrap gap-3">
@@ -138,7 +138,7 @@ export function LandingPageView() {
             <span className="badge border-emerald-500/30 bg-emerald-500/10 text-emerald-200">Connected</span>
           </div>
           <div className="space-y-4 p-6 font-mono text-xs text-slate-300">
-            <p className="text-slate-400">$ reviewpilot generate --provider openai --length medium --escalation on</p>
+            <p className="text-slate-400">$ replyzen generate --provider openai --length medium --escalation on</p>
             <p>
               [ok] Review imported from GOOGLE - Downtown Store
               <br />
@@ -180,7 +180,7 @@ export function LandingPageView() {
 
       <section className="mx-auto w-full max-w-7xl px-6 py-6">
         <div className="card p-8">
-          <h2 className="text-3xl font-semibold">How teams win with ReviewPilot in 3 steps</h2>
+          <h2 className="text-3xl font-semibold">How teams win with ReplyZen in 3 steps</h2>
           <div className="mt-6 grid gap-6 md:grid-cols-3">
             {[
               ['1. Import', 'Add reviews manually or upload CSV by source and location in minutes.'],
@@ -278,7 +278,7 @@ export function LandingPageView() {
         <div className="card p-8">
           <h2 className="text-3xl font-semibold">Get growth tactics every week</h2>
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-400">
-            Join the ReviewPilot newsletter for new conversion playbooks, review response templates, and AI workflow
+            Join the ReplyZen newsletter for new conversion playbooks, review response templates, and AI workflow
             optimization ideas.
           </p>
           <div className="mt-4">
@@ -292,8 +292,8 @@ export function LandingPageView() {
           <div className="md:col-span-2">
             <Logo />
             <p className="mt-3 max-w-sm text-slate-400">
-              ReviewPilot by ReplyZen helps teams transform customer reviews into consistent, on-brand replies that increase
-              trust and retention.
+              ReplyZen helps teams transform customer reviews into consistent, on-brand replies that increase trust and
+              retention.
             </p>
             <p className="mt-3 text-xs text-slate-500">Support: hello@reply-zen.com</p>
           </div>
@@ -338,7 +338,7 @@ export function LandingPageView() {
           </div>
         </div>
         <div className="mt-8 border-t border-slate-800 pt-4 text-xs text-slate-500">
-          (c) {new Date().getFullYear()} ReviewPilot (ReplyZen). Built for modern review operations.
+          (c) {new Date().getFullYear()} ReplyZen. Built for modern review operations.
         </div>
       </footer>
     </main>
