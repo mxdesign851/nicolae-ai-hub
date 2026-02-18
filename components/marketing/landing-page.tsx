@@ -272,7 +272,7 @@ export function LandingPageView() {
         <div className="landing-terminal p-7 md:p-8">
           <p className="landing-terminal-line">$ replyzen generate --workspace agency-hub --source google --tone warm-professional</p>
           <p className="landing-terminal-output">Generating AI drafts for 18 new reviews...</p>
-          <p className="landing-terminal-output">Applied brand voice profile: "Agency Master Voice v3".</p>
+          <p className="landing-terminal-output">Applied brand voice profile: &quot;Agency Master Voice v3&quot;.</p>
           <p className="landing-terminal-output">Queued 7 items for Admin approval. Export pack ready.</p>
         </div>
       </section>
