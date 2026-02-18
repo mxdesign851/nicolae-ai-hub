@@ -5,7 +5,13 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { sanitizeEmail } from '@/lib/sanitize';
 
+const fallbackSecret = 'reviewpilot-temporary-secret-change-me';
+if (!process.env.NEXTAUTH_SECRET) {
+  console.warn('[auth] NEXTAUTH_SECRET is missing. Using temporary fallback secret.');
+}
+
 export const authOptions: AuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET || fallbackSecret,
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/sign-in'
@@ -54,7 +60,7 @@ export const authOptions: AuthOptions = {
         token.email = user.email;
       }
 
-      if (token.email) {
+      if (typeof token.email === 'string' && token.email.length > 0) {
         const existing = await prisma.user.findUnique({ where: { email: token.email } });
         if (existing) token.sub = existing.id;
       }

@@ -1,6 +1,5 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { AppProviders } from '@/components/providers';
 
 export const metadata: Metadata = {
   title: 'ReviewPilot | AI Review Reply Manager',
@@ -11,9 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="antialiased">
-        <AppProviders>{children}</AppProviders>
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

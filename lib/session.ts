@@ -4,12 +4,24 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function requireUser() {
-  const session = await getServerSession(authOptions);
+  let session;
+  try {
+    session = await getServerSession(authOptions);
+  } catch {
+    redirect('/sign-in');
+  }
+
   if (!session?.user?.id) {
     redirect('/sign-in');
   }
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  let user = null;
+  try {
+    user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  } catch {
+    redirect('/sign-in');
+  }
+
   if (!user) {
     redirect('/sign-in');
   }
@@ -18,10 +30,21 @@ export async function requireUser() {
 }
 
 export async function requireApiUser() {
-  const session = await getServerSession(authOptions);
+  let session = null;
+  try {
+    session = await getServerSession(authOptions);
+  } catch {
+    return null;
+  }
+
   const userId = session?.user?.id;
   if (!userId) {
     return null;
   }
-  return prisma.user.findUnique({ where: { id: userId } });
+
+  try {
+    return await prisma.user.findUnique({ where: { id: userId } });
+  } catch {
+    return null;
+  }
 }
