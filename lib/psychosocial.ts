@@ -114,9 +114,9 @@ function buildEmotionalLoadScore(input: PsychosocialInput) {
 }
 
 function selectEmotionalLoadText(score: number) {
-  if (score >= 4) return 'nivel ridicat de incarcare emotionala si nevoie de sustinere constanta';
-  if (score >= 2) return 'nivel moderat de incarcare emotionala, cu nevoie de monitorizare periodica';
-  return 'nivel stabil de incarcare emotionala in evaluarea curenta';
+  if (score >= 4) return 'prezinta semne de incarcare emotionala ridicata si nevoie de sustinere constanta (orientativ)';
+  if (score >= 2) return 'prezinta semne de incarcare emotionala moderata, cu nevoie de monitorizare periodica (orientativ)';
+  return 'nivel stabil de adaptare emotionala in evaluarea curenta (orientativ)';
 }
 
 export function generatePsychosocialProfile(input: PsychosocialInput): PsychosocialGeneratedProfile {
@@ -174,7 +174,7 @@ export function generatePsychosocialProfile(input: PsychosocialInput): Psychosoc
   if (input.stressReaction === 'AGITAT' || input.stressReaction === 'CRIZE') {
     needs.add('predictibilitate si rutina zilnica');
     recommendations.add('mentineti ton calm, evitati suprastimularea si escaladarea');
-    risks.add('risc de episoade de agitatie in situatii de stres');
+    risks.add('posibile reactii intense in situatii de stres – recomandare: abordare calma');
     supportPlan.add('protocol simplu de de-escaladare aplicat unitar de echipa');
   }
   if (input.relationshipStyle === 'RETRAS') {
@@ -198,7 +198,7 @@ export function generatePsychosocialProfile(input: PsychosocialInput): Psychosoc
   const emotionalLoadScore = buildEmotionalLoadScore(input);
   if (input.sadnessFrequent || input.apathy || input.anxiety) {
     needs.add('consiliere emotionala regulata');
-    risks.add('risc de retragere si simptome depresive');
+    risks.add('prezinta semne de retragere si nevoie de sustinere');
   }
   if (input.anger) {
     recommendations.add('validati emotiile inainte de corectarea comportamentului');
@@ -210,7 +210,7 @@ export function generatePsychosocialProfile(input: PsychosocialInput): Psychosoc
   recommendations.add('documentati observatiile zilnice in fisa de monitorizare');
   recommendations.add('pastrati abordare constanta intre toate turele');
   supportPlan.add('sedinta lunara de revizuire interdisciplinara');
-  supportPlan.add('monitorizare psihosociala periodica, fara etichetari diagnostice');
+  supportPlan.add('monitorizare psihosociala periodica, fara diagnostic – doar profil orientativ de sprijin');
 
   const emotionalProfile = [
     `Evaluarea orientativa indica ${selectEmotionalLoadText(emotionalLoadScore)}.`,
@@ -222,7 +222,7 @@ export function generatePsychosocialProfile(input: PsychosocialInput): Psychosoc
   ].join(' ');
 
   if (!risks.size) {
-    risks.add('risc de dezechilibru in lipsa monitorizarii consecvente');
+    risks.add('necesitate monitorizare consecventa pentru mentinerea stabilitatii');
   }
   if (!needs.size) {
     needs.add('mentinerea suportului relational si a rutinei zilnice');

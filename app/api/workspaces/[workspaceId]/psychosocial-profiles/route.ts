@@ -1,8 +1,9 @@
-import { Role } from '@prisma/client';
+import { AuditAction, Role } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireApiUserOrThrow } from '@/lib/api-auth';
 import { extractJsonObject, generateText, Provider } from '@/lib/ai';
+import { logAudit } from '@/lib/audit';
 import { jsonError, HttpError } from '@/lib/http';
 import {
   APPETITE_LEVELS,
@@ -106,10 +107,19 @@ function buildPsychosocialAIPrompt(input: {
   hopeMotivation: boolean;
   observations: string | null;
 }) {
-  return `Esti asistent pentru fise psihosociale in centru de ingrijire.
-Scopul este ORIENTATIV de sprijin pentru personal.
-Nu formula diagnostice clinice. Nu folosi expresii de diagnostic (ex: "depresie severa").
-Foloseste formulare observationale si de suport.
+  return `Esti asistent pentru fise psihosociale orientative in centru de ingrijire.
+SCOP: ofera profil orientativ de sprijin pentru personal, monitorizare si fise clare pentru dosar.
+NU PUNE DIAGNOSTICE. Aplicatia NU diagnosticheaza. Foloseste DOAR limbaj observational si de suport.
+
+EXEMPLE GREGITE (interzise):
+- "are depresie severa" / "sufera de anxietate" / "diagnostic: X"
+- orice etichetare clinica sau psihiatrica
+
+EXEMPLE CORECTE (obligatorii):
+- "prezinta semne de retragere si nevoie de sustinere"
+- "prezinta semne de incarcare emotionala ridicata"
+- "nevoie de monitorizare si consiliere emotionala"
+- "posibile reactii intense in situatii de stres"
 
 Date reale evaluare:
 - Beneficiar: ${input.internalName}
@@ -145,11 +155,11 @@ Returneaza STRICT JSON (fara markdown) cu forma:
   "supportPlan": ["pas 1", "pas 2"]
 }
 
-Reguli:
+Reguli obligatorii:
 - limba romana
 - max 7 puncte per lista
-- recomandari concrete pentru personal (ton calm, structura, evitarea conflictului, activitati recomandate cand relevant)
-- fara etichete de diagnostic.`;
+- recomandari concrete pentru personal: ton calm, structura, evitarea conflictului, activitati recomandate cand relevant
+- ZERO etichete de diagnostic – doar observatii, nevoi, riscuri orientative si recomandari comportamentale`;
 }
 
 function serializeProfile(profile: {
@@ -313,6 +323,13 @@ export async function POST(request: Request, { params }: Params) {
         observations,
         signatureResponsible
       }
+    });
+
+    await logAudit({
+      workspaceId: params.workspaceId,
+      actorId: user.id,
+      action: AuditAction.PSYCHOSOCIAL_CREATED,
+      metadata: { profileId: profile.id, internalName: profile.internalName }
     });
 
     return NextResponse.json(

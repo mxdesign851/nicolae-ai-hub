@@ -241,7 +241,7 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
   return (
     <div className="space-y-5">
       <section className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
-        Scopul modulului este orientativ de sprijin, monitorizare si recomandari pentru personal. Nu emite diagnostice medicale.
+        <strong>Scop:</strong> profil orientativ de sprijin, recomandari pentru personal si fise clare pentru dosar. Nu pune diagnostice – doar observatii, nevoi orientative si recomandari comportamentale.
       </section>
       <section className="rounded-lg border border-slate-700 bg-slate-950/60 px-4 py-3 text-sm">
         <div className="flex flex-wrap items-center gap-3">
@@ -325,7 +325,10 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-2 text-xs text-slate-400">
+              Stare medicală (opțional, doar cu acordul beneficiarului/legal)
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 md:col-span-2">
               <select className="input" value={form.knownDiseases} onChange={(event) => setForm((prev) => ({ ...prev, knownDiseases: event.target.value as typeof prev.knownDiseases }))}>
                 {yesNoUnknownOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -443,13 +446,16 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.photoConsent}
-                  onChange={(event) => setForm((prev) => ({ ...prev, photoConsent: event.target.checked }))}
-                />
-                Consimtamant legal pentru poza
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={form.photoConsent}
+                    onChange={(event) => setForm((prev) => ({ ...prev, photoConsent: event.target.checked }))}
+                  />
+                  Consimtamant legal pentru poza (opțional)
+                </span>
+                <span className="text-xs text-slate-500">Doar pentru identificare. NU se folosește pentru analiză facială.</span>
               </label>
               <input
                 className="input"

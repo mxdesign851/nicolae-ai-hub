@@ -1,6 +1,7 @@
-import { Role } from '@prisma/client';
+import { AuditAction, Role } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { requireApiUserOrThrow } from '@/lib/api-auth';
+import { logAudit } from '@/lib/audit';
 import { jsonError, HttpError } from '@/lib/http';
 import { createSinglePagePdf } from '@/lib/pdf';
 import { prisma } from '@/lib/prisma';
@@ -90,6 +91,13 @@ export async function GET(_: Request, { params }: Params) {
         ]
       }
     ];
+
+    await logAudit({
+      workspaceId: params.workspaceId,
+      actorId: user.id,
+      action: AuditAction.PSYCHOSOCIAL_PDF_EXPORTED,
+      metadata: { profileId: profile.id, internalName: profile.internalName }
+    });
 
     const pdfBytes = await createSinglePagePdf({
       title: 'Fisa psihosociala orientativa',
