@@ -145,6 +145,10 @@ npx prisma generate
 npm run db:seed
 ```
 
+Seed behavior:
+- `npm run db:seed` -> **safe upsert mode** (does not wipe existing data)
+- `npm run db:seed:reset` -> hard reset + reseed demo data
+
 ### 4) Start app
 
 ```bash
