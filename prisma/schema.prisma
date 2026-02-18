@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum Plan {
+  FREE
+  PRO
+  AGENCY
+}
+
+enum ReviewSource {
+  GOOGLE
+  FACEBOOK
+  YELP
+  TRUSTPILOT
+  OTHER
+}
+
+enum ReviewStatus {
+  NEW
+  DRAFTED
+  APPROVED
+  SENT
+  ARCHIVED
+}
+
+enum Sentiment {
+  POS
+  NEU
+  NEG
+}
+
+enum Tone {
+  FRIENDLY
+  PROFESSIONAL
+  WARM
+  FUNNY
+  CALM
+}
+
+model User {
+  id            String               @id @default(cuid())
+  name          String?
+  email         String               @unique
+  hashedPassword String?
+  image         String?
+  memberships   WorkspaceMembership[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+}
+
+model Workspace {
+  id             String               @id @default(cuid())
+  name           String
+  plan           Plan                 @default(FREE)
+  aiGenerationsUsed Int               @default(0)
+  monthBucket    String               @default("1970-01")
+  memberships    WorkspaceMembership[]
+  locations      Location[]
+  reviews        Review[]
+  brandVoice     BrandVoice?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+}
+
+model WorkspaceMembership {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        Role      @default(MEMBER)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+model Location {
+  id          String      @id @default(cuid())
+  workspaceId String
+  name        String
+  timezone    String?
+  brandVoice  BrandVoice?
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  reviews     Review[]
+  createdAt   DateTime    @default(now())
+}
+
+model Review {
+  id          String       @id @default(cuid())
+  workspaceId String
+  locationId  String
+  source      ReviewSource
+  authorName  String
+  rating      Int
+  text        String
+  reviewUrl   String?
+  reviewDate  DateTime
+  language    String?
+  status      ReviewStatus @default(NEW)
+  tags        String[]
+  sentiment   Sentiment    @default(NEU)
+  aiReplyDraft String?
+  createdAt   DateTime     @default(now())
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  location    Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+}
+
+model BrandVoice {
+  id            String    @id @default(cuid())
+  workspaceId   String?
+  locationId    String?
+  tone          Tone      @default(PROFESSIONAL)
+  doList        String[]
+  dontList      String[]
+  examples      String[]
+  bannedWords   String[]
+  signOff       String?
+  workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  location      Location?  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId])
+  @@unique([locationId])
+}
+
+model Subscription {
+  id               String   @id @default(cuid())
+  workspaceId      String   @unique
+  provider         String
+  externalId       String   @unique
+  status           String
+  currentPeriodEnd DateTime?
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
