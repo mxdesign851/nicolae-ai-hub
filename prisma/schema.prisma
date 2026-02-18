@@ -154,6 +154,9 @@ model User {
   id              String                @id @default(cuid())
   name            String?
   email           String                @unique
+  phoneNumber     String?               @unique
+  phoneAuthEnabled Boolean              @default(false)
+  phoneVerifiedAt DateTime?
   hashedPassword  String?
   image           String?
   isSuperAdmin    Boolean               @default(false)
@@ -167,6 +170,21 @@ model User {
   psychosocialProfiles PsychosocialProfile[] @relation("PsychosocialCreatedBy")
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
+}
+
+model PhoneLoginCode {
+  id            String   @id @default(cuid())
+  phoneNumber   String
+  codeHash      String
+  expiresAt     DateTime
+  attempts      Int      @default(0)
+  consumedAt    DateTime?
+  requestedByIp String?
+  createdAt     DateTime @default(now())
+
+  @@index([phoneNumber, createdAt])
+  @@index([phoneNumber, consumedAt, expiresAt])
+  @@index([expiresAt])
 }
 
 model Workspace {

@@ -5,7 +5,7 @@ import { SignInForm } from '@/components/auth/sign-in-form';
 function mapAuthError(error?: string) {
   if (!error) return null;
   const readable: Record<string, string> = {
-    CredentialsSignin: 'Invalid login credentials. Check your email and password.',
+    CredentialsSignin: 'Invalid login credentials. Check your email/password or OTP code.',
     AccessDenied: 'Access denied. Contact your administrator.',
     OAuthSignin: 'OAuth sign-in failed. Please try again.',
     OAuthCallback: 'OAuth callback failed. Please try again.',
@@ -61,6 +61,7 @@ export default function SignInPage({
               <li>- Inbox + filters + sentiment tagging</li>
               <li>- Brand voice controls per workspace or location</li>
               <li>- Exports, analytics, billing, and role management</li>
+              <li>- Internal secure sign-in with phone number + OTP code</li>
             </ul>
             <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100">
               <p className="font-semibold">Demo premium access included</p>

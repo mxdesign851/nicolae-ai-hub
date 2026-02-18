@@ -10,7 +10,7 @@ export function SignUpForm() {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', phoneNumber: '' });
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -56,6 +56,15 @@ export function SignUpForm() {
           value={form.email}
           onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
           placeholder="owner@example.com"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm text-slate-300">Telefon (optional pentru OTP)</label>
+        <input
+          className="input"
+          value={form.phoneNumber}
+          onChange={(e) => setForm((prev) => ({ ...prev, phoneNumber: e.target.value }))}
+          placeholder="+407xxxxxxxx"
         />
       </div>
       <div>

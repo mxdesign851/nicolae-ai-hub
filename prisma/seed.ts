@@ -41,6 +41,7 @@ async function maybeResetAllData() {
   }
 
   console.log('[seed] RESET mode enabled. Deleting all data...');
+  await prisma.phoneLoginCode.deleteMany();
   await prisma.reviewAuditLog.deleteMany();
   await prisma.replyGeneration.deleteMany();
   await prisma.review.deleteMany();
@@ -161,56 +162,106 @@ async function main() {
 
   const owner = await prisma.user.upsert({
     where: { email: 'owner@example.com' },
-    update: { name: 'Demo Owner', hashedPassword: defaultPasswordHash, isSuperAdmin: false },
+    update: {
+      name: 'Demo Owner',
+      hashedPassword: defaultPasswordHash,
+      isSuperAdmin: false,
+      phoneNumber: '+40740000001',
+      phoneAuthEnabled: true,
+      phoneVerifiedAt: new Date()
+    },
     create: {
       email: 'owner@example.com',
       name: 'Demo Owner',
       hashedPassword: defaultPasswordHash,
-      isSuperAdmin: false
+      isSuperAdmin: false,
+      phoneNumber: '+40740000001',
+      phoneAuthEnabled: true,
+      phoneVerifiedAt: new Date()
     }
   });
 
   const member = await prisma.user.upsert({
     where: { email: 'member@example.com' },
-    update: { name: 'Demo Member', hashedPassword: defaultPasswordHash, isSuperAdmin: false },
+    update: {
+      name: 'Demo Member',
+      hashedPassword: defaultPasswordHash,
+      isSuperAdmin: false,
+      phoneNumber: '+40740000002',
+      phoneAuthEnabled: true,
+      phoneVerifiedAt: new Date()
+    },
     create: {
       email: 'member@example.com',
       name: 'Demo Member',
       hashedPassword: defaultPasswordHash,
-      isSuperAdmin: false
+      isSuperAdmin: false,
+      phoneNumber: '+40740000002',
+      phoneAuthEnabled: true,
+      phoneVerifiedAt: new Date()
     }
   });
 
   const superAdmin = await prisma.user.upsert({
     where: { email: 'superadmin@reply-zen.com' },
-    update: { name: 'Super Admin', hashedPassword: defaultPasswordHash, isSuperAdmin: true },
+    update: {
+      name: 'Super Admin',
+      hashedPassword: defaultPasswordHash,
+      isSuperAdmin: true,
+      phoneNumber: '+40740000003',
+      phoneAuthEnabled: true,
+      phoneVerifiedAt: new Date()
+    },
     create: {
       email: 'superadmin@reply-zen.com',
       name: 'Super Admin',
       hashedPassword: defaultPasswordHash,
-      isSuperAdmin: true
+      isSuperAdmin: true,
+      phoneNumber: '+40740000003',
+      phoneAuthEnabled: true,
+      phoneVerifiedAt: new Date()
     }
   });
 
   const premiumOwner = await prisma.user.upsert({
     where: { email: 'premium@reply-zen.com' },
-    update: { name: 'Premium Demo Owner', hashedPassword: defaultPasswordHash, isSuperAdmin: false },
+    update: {
+      name: 'Premium Demo Owner',
+      hashedPassword: defaultPasswordHash,
+      isSuperAdmin: false,
+      phoneNumber: '+40740000004',
+      phoneAuthEnabled: true,
+      phoneVerifiedAt: new Date()
+    },
     create: {
       email: 'premium@reply-zen.com',
       name: 'Premium Demo Owner',
       hashedPassword: defaultPasswordHash,
-      isSuperAdmin: false
+      isSuperAdmin: false,
+      phoneNumber: '+40740000004',
+      phoneAuthEnabled: true,
+      phoneVerifiedAt: new Date()
     }
   });
 
   const premiumMember = await prisma.user.upsert({
     where: { email: 'premium-member@reply-zen.com' },
-    update: { name: 'Premium Demo Member', hashedPassword: defaultPasswordHash, isSuperAdmin: false },
+    update: {
+      name: 'Premium Demo Member',
+      hashedPassword: defaultPasswordHash,
+      isSuperAdmin: false,
+      phoneNumber: '+40740000005',
+      phoneAuthEnabled: true,
+      phoneVerifiedAt: new Date()
+    },
     create: {
       email: 'premium-member@reply-zen.com',
       name: 'Premium Demo Member',
       hashedPassword: defaultPasswordHash,
-      isSuperAdmin: false
+      isSuperAdmin: false,
+      phoneNumber: '+40740000005',
+      phoneAuthEnabled: true,
+      phoneVerifiedAt: new Date()
     }
   });
 
@@ -699,6 +750,7 @@ async function main() {
   console.log('- member@example.com / password123');
   console.log('- superadmin@reply-zen.com / password123');
   console.log('- premium@reply-zen.com / password123');
+  console.log('[seed] Demo OTP phones: +40740000001 ... +40740000005');
   console.log('[seed] Use SEED_RESET=true npm run db:seed to fully reset all data.');
 }
 
