@@ -6,6 +6,7 @@ import { extractJsonObject, generateText, Provider } from '@/lib/ai';
 import { jsonError, HttpError } from '@/lib/http';
 import {
   calculateMedicationAlerts,
+  estimateRestockQuantity,
   mapPrismaMedicationItem,
   toMedicationCategoryLabel
 } from '@/lib/medications';
@@ -36,6 +37,53 @@ const responseSchema = z.object({
     .max(12),
   recommendations: z.array(z.string().min(2).max(350)).max(8)
 });
+
+function buildFallbackForecast(input: {
+  horizonDays: number;
+  projected: ReturnType<typeof mapPrismaMedicationItem>[];
+  alerts: ReturnType<typeof calculateMedicationAlerts>;
+}): z.infer<typeof responseSchema> {
+  const byId = new Map(input.projected.map((item) => [item.id, item]));
+  const priorityOrders = input.alerts
+    .filter((alert) => alert.type === 'OUT_OF_STOCK' || alert.type === 'LOW_STOCK')
+    .slice(0, 10)
+    .map((alert) => {
+      const item = byId.get(alert.itemId);
+      const recommendedQuantity = item ? estimateRestockQuantity(item) : Math.max(alert.missingQuantity, 0);
+      const estimatedUnitPriceRon = alert.predictedUnitPrice ?? item?.lastUnitPrice ?? null;
+      const estimatedTotalRon = estimatedUnitPriceRon === null ? null : Number((estimatedUnitPriceRon * recommendedQuantity).toFixed(2));
+      return {
+        name: alert.name,
+        reason:
+          alert.type === 'OUT_OF_STOCK'
+            ? `Stoc epuizat pe categoria ${toMedicationCategoryLabel(alert.category)}${alert.shelf ? ` (raft ${alert.shelf})` : ''}.`
+            : `Stoc sub prag pentru ${toMedicationCategoryLabel(alert.category)}${alert.shelf ? ` (raft ${alert.shelf})` : ''}.`,
+        recommendedQuantity,
+        estimatedUnitPriceRon,
+        estimatedTotalRon,
+        urgency: (alert.type === 'OUT_OF_STOCK' ? 'high' : 'medium') as 'high' | 'medium' | 'low'
+      };
+    });
+
+  const totalEstimatedBudgetRon = priorityOrders.reduce<number | null>((acc, order) => {
+    if (order.estimatedTotalRon === null) return acc;
+    return (acc ?? 0) + order.estimatedTotalRon;
+  }, 0);
+
+  return {
+    summary:
+      priorityOrders.length > 0
+        ? `Forecast intern: ${priorityOrders.length} medicamente necesita comanda in urmatoarele ${input.horizonDays} zile.`
+        : `Forecast intern: nu exista comenzi prioritare in urmatoarele ${input.horizonDays} zile.`,
+    totalEstimatedBudgetRon,
+    priorityOrders,
+    recommendations: [
+      'Verifica fizic stocurile marcate cu urgenta high inainte de lansarea comenzilor.',
+      'Confirma preturile la furnizori pentru pozitiile fara cost estimat.',
+      'Actualizeaza consumul zilnic per produs pentru predictii AI mai precise.'
+    ]
+  };
+}
 
 function buildMedicationForecastPrompt(input: {
   horizonDays: number;
@@ -142,25 +190,35 @@ export async function POST(request: Request, { params }: Params) {
         expiresAt: alert.expiresAt?.toISOString() ?? null
       }))
     });
-
-    const generated = await generateText({
-      provider: parsed.provider as Provider,
-      prompt,
-      maxTokens: 1200,
-      temperature: 0.2
+    const fallbackForecast = buildFallbackForecast({
+      horizonDays: parsed.horizonDays,
+      projected,
+      alerts
     });
 
-    const aiJson = extractJsonObject<unknown>(generated.text);
-    const validated = responseSchema.parse(aiJson);
+    let validated: z.infer<typeof responseSchema> = fallbackForecast;
+    let model: string | null = null;
+    let fallbackRulesUsed = true;
+    try {
+      const generated = await generateText({
+        provider: parsed.provider as Provider,
+        prompt,
+        maxTokens: 1200,
+        temperature: 0.2
+      });
+      const aiJson = extractJsonObject<unknown>(generated.text);
+      validated = responseSchema.parse(aiJson);
+      model = generated.model;
+      fallbackRulesUsed = false;
+    } catch {
+      // fallback generated from deterministic inventory rules
+    }
+
     return NextResponse.json({
       forecast: validated,
       provider: parsed.provider,
-      model: generated.model,
-      usage: {
-        inputTokens: generated.inputTokens,
-        outputTokens: generated.outputTokens,
-        estimatedCostUsd: generated.estimatedCostUsd
-      }
+      model,
+      fallbackRulesUsed
     });
   } catch (error) {
     return jsonError(error);

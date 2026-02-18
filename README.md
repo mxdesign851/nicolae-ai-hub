@@ -23,6 +23,9 @@ ReplyZen helps businesses and agencies manage imported reviews (Google/Facebook/
   - length selection (`short`, `medium`, `long`)
   - optional language target
   - escalation rules for low-rating/complaint content
+- Internal authentication supports:
+  - email + password
+  - phone number + one-time OTP code (secure, expiring, single-use)
 - Brand Voice at workspace or location level (Pro+)
 - Approval workflow (Member drafts, Admin/Owner approves)
 - Full review audit trail + generation metadata
@@ -32,6 +35,17 @@ ReplyZen helps businesses and agencies manage imported reviews (Google/Facebook/
 - Stripe + PayPal subscription routes + webhook handlers
 - Payment-failure grace handling and auto-downgrade to Free
 - Privacy and Terms template pages
+- Psychosocial beneficiary profiling module (orientative support, no clinical diagnosis):
+  - structured intake sections (A-F: basic/social/medical behavior/emotional/photo)
+  - explicit medical/photo consent handling
+  - AI-generated support profile with diagnostic-language safety fallback
+  - one-page archival PDF for case file
+  - audit logs for profile creation and PDF export
+- Medication operations AI module:
+  - category/shelf inventory (cardio, diabet, gastro, respirator, neuro, psihiatric, antibiotice, durere, alergii, dermato, vitamine, altele)
+  - alerts for out-of-stock / low-stock / expiring-soon
+  - AI forecast for restock budgeting
+  - AI operational digest for missing lists + staff action steps + phone alert message
 
 ---
 
@@ -183,6 +197,7 @@ See `.env.example` for all required keys:
 - Core: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `APP_URL`
 - Optional Railway helper: `RAILWAY_PUBLIC_DOMAIN`
 - AI: `OPENAI_API_KEY`, `OPENAI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `GEMINI_API_KEY`, `GEMINI_MODEL`
+- Phone OTP auth: `PHONE_OTP_SECRET`, `PHONE_OTP_TTL_MINUTES`, `PHONE_OTP_DEBUG`, `SMS_WEBHOOK_URL`
 - Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_AGENCY`
 - PayPal: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_ENV`, `PAYPAL_PLAN_PRO`, `PAYPAL_PLAN_AGENCY`
 - Optional cron protection: `CRON_SECRET`

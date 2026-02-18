@@ -65,6 +65,31 @@ type AIForecastPayload = {
   recommendations: string[];
 };
 
+type AIDigestMissingItem = {
+  name: string;
+  categoryLabel: string;
+  shelf: string | null;
+  stockQuantity: number;
+  threshold: number;
+  unit: string;
+  recommendedRestockQuantity: number;
+  urgency: 'high' | 'medium' | 'low';
+  note: string;
+};
+
+type AIDigestPayload = {
+  summary: string;
+  missingNow: AIDigestMissingItem[];
+  predictedShortages: Array<{
+    name: string;
+    runoutAt: string | null;
+    reason: string;
+    urgency: 'high' | 'medium' | 'low';
+  }>;
+  staffSteps: string[];
+  phoneAlertMessage: string;
+};
+
 type Props = {
   workspaceId: string;
   initialItems: MedicationItem[];
@@ -132,12 +157,16 @@ export function MedicationHub({
   const [summary, setSummary] = useState(initialSummary);
   const [forecast, setForecast] = useState<AIForecastPayload | null>(null);
   const [forecastModel, setForecastModel] = useState<string | null>(null);
+  const [digest, setDigest] = useState<AIDigestPayload | null>(null);
+  const [digestModel, setDigestModel] = useState<string | null>(null);
   const [phonePreview, setPhonePreview] = useState<string | null>(initialPhoneNotificationPreview);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [forecastProvider, setForecastProvider] = useState<'openai' | 'claude' | 'gemini'>('openai');
   const [forecastHorizonDays, setForecastHorizonDays] = useState(30);
+  const [digestProvider, setDigestProvider] = useState<'openai' | 'claude' | 'gemini'>('openai');
+  const [digestHorizonDays, setDigestHorizonDays] = useState(30);
 
   const [preferenceDraft, setPreferenceDraft] = useState({
     phoneNumber: initialPreference.phoneNumber ?? '',
@@ -196,6 +225,7 @@ export function MedicationHub({
   }, [items, purchaseForm.itemId]);
 
   const criticalAlerts = useMemo(() => alerts.filter((alert) => alert.type === 'OUT_OF_STOCK').length, [alerts]);
+  const missingNowAlerts = useMemo(() => alerts.filter((alert) => alert.type === 'OUT_OF_STOCK'), [alerts]);
 
   async function reloadData() {
     const response = await fetch(`/api/workspaces/${workspaceId}/medications`);
@@ -317,9 +347,45 @@ export function MedicationHub({
         }
         setForecast(json.forecast);
         setForecastModel(json.model || null);
-        setMessage('Predictie AI generata din datele reale ale stocului.');
+        setMessage(
+          json.fallbackRulesUsed
+            ? 'Predictie generata cu fallback pe reguli interne (AI indisponibil sau raspuns invalid).'
+            : 'Predictie AI generata din datele reale ale stocului.'
+        );
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Eroare la predictia AI');
+      }
+    });
+  }
+
+  function runAIDigest(event: FormEvent) {
+    event.preventDefault();
+    resetNotices();
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/workspaces/${workspaceId}/medications/alerts-ai`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: digestProvider,
+            horizonDays: digestHorizonDays
+          })
+        });
+        const json = await response.json();
+        if (!response.ok) {
+          setError(json.error || 'Nu am putut genera notificarea AI');
+          return;
+        }
+        setDigest(json.digest);
+        setDigestModel(json.ai?.model || null);
+        setPhonePreview(json.digest?.phoneAlertMessage || null);
+        setMessage(
+          json.ai?.fallbackRulesUsed
+            ? 'Digest salvat cu fallback pe reguli interne (AI partial).'
+            : 'Digest AI generat: lista lipsuri, riscuri si pasi pentru personal.'
+        );
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'Eroare la digest AI');
       }
     });
   }
@@ -457,6 +523,34 @@ export function MedicationHub({
         </div>
       </section>
 
+      <section className="card p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold">Lista medicamente lipsa acum</h2>
+            <p className="text-sm text-slate-400">Elemente cu stoc 0, ordonate pentru interventie imediata.</p>
+          </div>
+          <p className="text-xs uppercase tracking-wide text-rose-300">Total: {missingNowAlerts.length}</p>
+        </div>
+        <div className="mt-3 grid gap-2">
+          {missingNowAlerts.length ? (
+            missingNowAlerts.slice(0, 12).map((alert) => (
+              <div key={`missing-${alert.itemId}`} className="rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-sm">
+                <p className="font-medium text-rose-100">
+                  {alert.name} ({alert.categoryLabel}
+                  {alert.shelf ? ` / raft ${alert.shelf}` : ''})
+                </p>
+                <p className="text-xs text-rose-200/90">
+                  Stoc: {alert.stockQuantity} {alert.unit} | Prag: {alert.minStockThreshold} {alert.unit} | Recomandat: {Math.max(alert.missingQuantity, alert.minStockThreshold)}{' '}
+                  {alert.unit}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-emerald-300">Nu exista medicamente complet epuizate.</p>
+          )}
+        </div>
+      </section>
+
       <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <article className="card overflow-hidden">
           <div className="border-b border-slate-800 px-4 py-3">
@@ -528,6 +622,75 @@ export function MedicationHub({
         </article>
 
         <div className="space-y-5">
+          <article className="card p-4">
+            <h3 className="text-lg font-semibold">AI notificari si lista lipsuri</h3>
+            <p className="mt-1 text-sm text-slate-400">
+              Genereaza un rezumat AI cu lipsuri curente, riscuri de epuizare si pasi recomandati pentru personal.
+            </p>
+            <form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={runAIDigest}>
+              <select className="input" value={digestProvider} onChange={(event) => setDigestProvider(event.target.value as typeof digestProvider)}>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude</option>
+                <option value="gemini">Gemini</option>
+              </select>
+              <input
+                className="input"
+                type="number"
+                min={7}
+                max={120}
+                value={digestHorizonDays}
+                onChange={(event) => setDigestHorizonDays(Math.max(7, Math.min(120, Number(event.target.value) || 30)))}
+              />
+              <button className="btn btn-primary sm:col-span-2" disabled={pending}>
+                {pending ? 'Se genereaza...' : 'Genereaza digest AI'}
+              </button>
+            </form>
+            {digest ? (
+              <div className="mt-3 space-y-2 rounded-lg border border-slate-700 bg-slate-950/60 p-3 text-sm">
+                <p className="text-xs uppercase tracking-wide text-slate-400">Model: {digestModel || '-'} | Orizont: {digestHorizonDays} zile</p>
+                <p>{digest.summary}</p>
+                <div>
+                  <p className="font-medium">Lipsuri prioritare</p>
+                  <ul className="mt-1 space-y-1 text-xs text-slate-200">
+                    {digest.missingNow.length ? (
+                      digest.missingNow.slice(0, 8).map((row) => (
+                        <li key={`${row.name}-${row.shelf || 'na'}`}>
+                          - [{row.urgency}] {row.name} ({row.categoryLabel}
+                          {row.shelf ? ` / raft ${row.shelf}` : ''}) - stoc {row.stockQuantity}/{row.threshold} {row.unit}, recomandat{' '}
+                          {row.recommendedRestockQuantity} {row.unit}
+                        </li>
+                      ))
+                    ) : (
+                      <li>- Nu exista lipsuri imediate.</li>
+                    )}
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium">Predictii de epuizare</p>
+                  <ul className="mt-1 space-y-1 text-xs text-slate-200">
+                    {digest.predictedShortages.length ? (
+                      digest.predictedShortages.slice(0, 6).map((row) => (
+                        <li key={`${row.name}-${row.runoutAt || 'na'}`}>
+                          - [{row.urgency}] {row.name}: {row.runoutAt || '-'} ({row.reason})
+                        </li>
+                      ))
+                    ) : (
+                      <li>- Nu sunt estimate epuizari in interval.</li>
+                    )}
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium">Pasi recomandati</p>
+                  <ul className="mt-1 list-disc pl-5 text-xs text-slate-200">
+                    {digest.staffSteps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ) : null}
+          </article>
+
           <article className="card p-4">
             <h3 className="text-lg font-semibold">Predictie AI aprovizionare</h3>
             <p className="mt-1 text-sm text-slate-400">

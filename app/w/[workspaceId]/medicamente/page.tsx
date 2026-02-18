@@ -55,6 +55,9 @@ export default async function MedicationsPage({ params }: { params: { workspaceI
         <p className="mt-1 text-sm text-slate-400">
           Inventar intern pe categorii/rafturi pentru {membership.workspace.name}, cu alerte, predictii de stoc si export PDF.
         </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Categorii standard: cardio, diabet, gastro, respirator, neuro, psihiatric, antibiotice, durere, alergii, dermato, vitamine, altele.
+        </p>
         <p className="mt-2 text-xs text-slate-500">
           AI providers disponibili: OpenAI, Claude, Gemini. Configureaza cheile in env: OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY.
         </p>

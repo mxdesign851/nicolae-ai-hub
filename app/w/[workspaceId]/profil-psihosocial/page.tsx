@@ -19,9 +19,12 @@ export default async function PsychosocialPage({ params }: { params: { workspace
       <section className="card p-5">
         <h1 className="text-2xl font-semibold">Profil psihosocial beneficiar</h1>
         <p className="mt-1 text-sm text-slate-400">
-          Modul orientativ de sprijin pentru personal: monitorizare, recomandari comportamentale si fisa PDF pentru dosar.
+          Modul orientativ de sprijin pentru personal: monitorizare, recomandari comportamentale si fisa PDF arhivabila pentru dosar.
         </p>
         <p className="mt-2 text-xs text-slate-500">
+          Nu formuleaza diagnostice medicale. Datele medicale/poza se introduc doar cu acord explicit, iar exporturile sunt jurnalizate.
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
           Generator AI activ pe OpenAI / Claude / Gemini. Seteaza cheile API in fisierul de mediu al aplicatiei.
         </p>
       </section>

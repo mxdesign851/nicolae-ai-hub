@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireApiUserOrThrow } from '@/lib/api-auth';
 import { jsonError, HttpError } from '@/lib/http';
+import { normalizePhoneNumber } from '@/lib/phone';
 import { prisma } from '@/lib/prisma';
-import { sanitizeOptionalText } from '@/lib/sanitize';
 import { assertWorkspaceAccess } from '@/lib/tenant';
 
 type Params = { params: { workspaceId: string } };
@@ -17,15 +17,8 @@ const updatePreferenceSchema = z.object({
   expiryAlertDays: z.coerce.number().int().min(1).max(180).optional()
 });
 
-const PHONE_PATTERN = /^[+0-9()\-.\s]{7,24}$/;
-
 function normalizePhone(value: string | null | undefined) {
-  const cleaned = sanitizeOptionalText(value, 32);
-  if (!cleaned) return null;
-  if (!PHONE_PATTERN.test(cleaned)) {
-    throw new HttpError(400, 'Numar de telefon invalid');
-  }
-  return cleaned;
+  return normalizePhoneNumber(value);
 }
 
 export async function GET(_: Request, { params }: Params) {

@@ -2,6 +2,8 @@ import NextAuth, { type AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GitHubProvider from 'next-auth/providers/github';
 import bcrypt from 'bcryptjs';
+import { verifyPhoneLoginCode } from '@/lib/phone-auth';
+import { normalizePhoneNumber } from '@/lib/phone';
 import { prisma } from '@/lib/prisma';
 import { sanitizeEmail } from '@/lib/sanitize';
 import { ensureNextAuthPublicUrl } from '@/lib/public-url';
@@ -45,13 +47,51 @@ export const authOptions: AuthOptions = {
         }
       }
     }),
+    CredentialsProvider({
+      id: 'phone-otp',
+      name: 'phone-otp',
+      credentials: {
+        phoneNumber: { label: 'phoneNumber', type: 'text' },
+        code: { label: 'code', type: 'text' }
+      },
+      async authorize(credentials) {
+        if (!credentials?.phoneNumber || !credentials.code) return null;
+        try {
+          const phoneNumber = normalizePhoneNumber(credentials.phoneNumber);
+          if (!phoneNumber) return null;
+
+          const user = await prisma.user.findFirst({
+            where: { phoneNumber, phoneAuthEnabled: true }
+          });
+          if (!user) return null;
+
+          const isValid = await verifyPhoneLoginCode({
+            phoneNumber,
+            code: credentials.code
+          });
+          if (!isValid) return null;
+
+          if (!user.phoneVerifiedAt) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { phoneVerifiedAt: new Date() }
+            });
+          }
+
+          return { id: user.id, email: user.email, name: user.name || undefined };
+        } catch (error) {
+          console.error('[auth] Phone OTP authorize failed', error);
+          return null;
+        }
+      }
+    }),
     ...(process.env.GITHUB_ID && process.env.GITHUB_SECRET
       ? [GitHubProvider({ clientId: process.env.GITHUB_ID, clientSecret: process.env.GITHUB_SECRET })]
       : [])
   ],
   callbacks: {
     async signIn({ user, account }) {
-      if (account?.provider !== 'credentials' && user.email) {
+      if (account?.provider && !['credentials', 'phone-otp'].includes(account.provider) && user.email) {
         try {
           await prisma.user.upsert({
             where: { email: sanitizeEmail(user.email) },

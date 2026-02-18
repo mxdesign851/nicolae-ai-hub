@@ -20,11 +20,13 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-1 pl-5">
           <li>Account identity details: email, name, hashed password.</li>
           <li>Workspace content: reviews, tags, replies, and workflow events.</li>
+          <li>Optional psychosocial profile records for beneficiaries, only when lawful consent is documented.</li>
           <li>Billing metadata from Stripe or PayPal subscriptions.</li>
         </ul>
         <h2 className="text-lg font-semibold">How data is used</h2>
         <ul className="list-disc space-y-1 pl-5">
           <li>Provide AI reply generation and workflow features.</li>
+          <li>Provide orientative psychosocial support reports and archival PDF case sheets (non-diagnostic use).</li>
           <li>Enforce workspace plan limits and security controls.</li>
           <li>Support billing, analytics, and account operations.</li>
         </ul>

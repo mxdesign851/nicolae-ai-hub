@@ -146,12 +146,17 @@ enum AuditAction {
   MEMBER_ROLE_UPDATED
   MEMBER_REMOVED
   SUBSCRIPTION_UPDATED
+  PSYCHOSOCIAL_PROFILE_CREATED
+  PSYCHOSOCIAL_PROFILE_PDF_EXPORTED
 }
 
 model User {
   id              String                @id @default(cuid())
   name            String?
   email           String                @unique
+  phoneNumber     String?               @unique
+  phoneAuthEnabled Boolean              @default(false)
+  phoneVerifiedAt DateTime?
   hashedPassword  String?
   image           String?
   isSuperAdmin    Boolean               @default(false)
@@ -165,6 +170,21 @@ model User {
   psychosocialProfiles PsychosocialProfile[] @relation("PsychosocialCreatedBy")
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
+}
+
+model PhoneLoginCode {
+  id            String   @id @default(cuid())
+  phoneNumber   String
+  codeHash      String
+  expiresAt     DateTime
+  attempts      Int      @default(0)
+  consumedAt    DateTime?
+  requestedByIp String?
+  createdAt     DateTime @default(now())
+
+  @@index([phoneNumber, createdAt])
+  @@index([phoneNumber, consumedAt, expiresAt])
+  @@index([expiresAt])
 }
 
 model Workspace {
@@ -411,6 +431,7 @@ model PsychosocialProfile {
   locationCenter            String
   assessmentDate            DateTime
   responsiblePerson         String
+  medicalConsent            Boolean            @default(false)
   familySupport             FamilySupportLevel
   housingStatus             HousingStatus
   familyContactFrequency    String?
