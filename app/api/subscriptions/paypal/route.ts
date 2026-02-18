@@ -1,11 +1,24 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { requireApiUserOrThrow } from '@/lib/api-auth';
+import { assertWorkspaceAccess } from '@/lib/tenant';
+import { HttpError, jsonError } from '@/lib/http';
+import { mapPlanFromPayPalPlanId } from '@/lib/billing';
 
-const schema = z.object({ workspaceId: z.string(), planId: z.string() });
+const schema = z.object({
+  workspaceId: z.string().min(1),
+  planId: z.string().optional(),
+  plan: z.enum(['PRO', 'AGENCY']).optional()
+});
 
 async function createPayPalSubscription(planId: string) {
   const base = process.env.PAYPAL_ENV === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+  if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+    throw new HttpError(500, 'Missing PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET');
+  }
+
   const tokenRes = await fetch(`${base}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
@@ -14,6 +27,10 @@ async function createPayPalSubscription(planId: string) {
     },
     body: 'grant_type=client_credentials'
   });
+  if (!tokenRes.ok) {
+    const text = await tokenRes.text();
+    throw new HttpError(tokenRes.status, 'PayPal token request failed', text);
+  }
   const tokenJson = await tokenRes.json();
 
   const subRes = await fetch(`${base}/v1/billing/subscriptions`, {
@@ -30,27 +47,53 @@ async function createPayPalSubscription(planId: string) {
       }
     })
   });
-  return subRes.json();
+  if (!subRes.ok) {
+    const text = await subRes.text();
+    throw new HttpError(subRes.status, 'PayPal subscription create failed', text);
+  }
+  return subRes.json() as Promise<{ id: string; status: string; links?: Array<{ rel: string; href: string }>; plan_id?: string }>;
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  try {
+    const user = await requireApiUserOrThrow();
+    const body = await request.json();
+    const parsed = schema.parse(body);
+    await assertWorkspaceAccess(user.id, parsed.workspaceId, [Role.OWNER, Role.ADMIN]);
 
-  const subscription = await createPayPalSubscription(parsed.data.planId);
+    const fallbackPlanId = parsed.plan === 'AGENCY' ? process.env.PAYPAL_PLAN_AGENCY : process.env.PAYPAL_PLAN_PRO;
+    const planId = parsed.planId ?? fallbackPlanId;
+    if (!planId) {
+      throw new HttpError(400, 'Missing PayPal plan id. Provide planId or PAYPAL_PLAN_PRO/PAYPAL_PLAN_AGENCY env.');
+    }
 
-  await prisma.subscription.upsert({
-    where: { workspaceId: parsed.data.workspaceId },
-    create: {
-      workspaceId: parsed.data.workspaceId,
-      provider: 'paypal',
-      externalId: subscription.id,
-      status: subscription.status || 'APPROVAL_PENDING'
-    },
-    update: { provider: 'paypal', externalId: subscription.id, status: subscription.status || 'APPROVAL_PENDING' }
-  });
+    const subscription = await createPayPalSubscription(planId);
+    await prisma.subscription.upsert({
+      where: { workspaceId: parsed.workspaceId },
+      create: {
+        workspaceId: parsed.workspaceId,
+        provider: 'PAYPAL',
+        externalId: subscription.id,
+        status: 'APPROVAL_PENDING',
+        plan: mapPlanFromPayPalPlanId(subscription.plan_id ?? planId),
+        metadata: {
+          planId: subscription.plan_id ?? planId
+        }
+      },
+      update: {
+        provider: 'PAYPAL',
+        externalId: subscription.id,
+        status: 'APPROVAL_PENDING',
+        plan: mapPlanFromPayPalPlanId(subscription.plan_id ?? planId),
+        metadata: {
+          planId: subscription.plan_id ?? planId
+        }
+      }
+    });
 
-  const approve = subscription.links?.find((link: { rel: string }) => link.rel === 'approve')?.href;
-  return NextResponse.json({ approvalUrl: approve, subscriptionId: subscription.id });
+    const approve = subscription.links?.find((link) => link.rel === 'approve')?.href;
+    return NextResponse.json({ approvalUrl: approve, subscriptionId: subscription.id });
+  } catch (error) {
+    return jsonError(error);
+  }
 }

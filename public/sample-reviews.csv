@@ -1,0 +1,4 @@
+name,rating,date,text,source,location,url,language,tags
+Jane Doe,5,2026-02-01,"Loved the fast support and friendly staff.",GOOGLE,Downtown Store,https://example.com/review/1,en,service|support
+Mark R,2,2026-02-02,"Order arrived late and packaging was damaged.",YELP,Airport Branch,https://example.com/review/2,en,delivery|packaging
+Anonymous,3,2026-02-03,"Good products but checkout line was too long.",FACEBOOK,Downtown Store,https://example.com/review/3,en,checkout|wait-time

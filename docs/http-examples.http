@@ -1,0 +1,88 @@
+### Register
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Owner",
+  "email": "owner@example.com",
+  "password": "password123"
+}
+
+### List my workspaces (requires auth cookie)
+GET http://localhost:3000/api/workspaces
+
+### Create workspace
+POST http://localhost:3000/api/workspaces
+Content-Type: application/json
+
+{
+  "name": "Acme Workspace"
+}
+
+### Manual review import
+POST http://localhost:3000/api/reviews/import
+Content-Type: application/json
+
+{
+  "workspaceId": "WORKSPACE_ID",
+  "locationId": "LOCATION_ID",
+  "source": "GOOGLE",
+  "authorName": "Jane D.",
+  "rating": 4,
+  "text": "Great service and quick support.",
+  "reviewDate": "2026-02-18T00:00:00.000Z",
+  "reviewUrl": "https://example.com/review/123"
+}
+
+### Generate AI draft reply
+POST http://localhost:3000/api/reviews/generate
+Content-Type: application/json
+
+{
+  "workspaceId": "WORKSPACE_ID",
+  "reviewId": "REVIEW_ID",
+  "provider": "openai",
+  "length": "medium",
+  "targetLanguage": "English",
+  "escalation": true
+}
+
+### Suggest tags + sentiment
+POST http://localhost:3000/api/reviews/REVIEW_ID/suggest
+Content-Type: application/json
+
+{
+  "workspaceId": "WORKSPACE_ID",
+  "provider": "openai"
+}
+
+### Approve draft reply (admin/owner)
+POST http://localhost:3000/api/reviews/REVIEW_ID/approve
+Content-Type: application/json
+
+{
+  "workspaceId": "WORKSPACE_ID",
+  "approvedReply": "Thanks for the feedback..."
+}
+
+### Export CSV (Agency)
+GET http://localhost:3000/api/workspaces/WORKSPACE_ID/exports/csv?ids=REVIEW_ID_1,REVIEW_ID_2
+
+### Stripe checkout
+POST http://localhost:3000/api/subscriptions/stripe
+Content-Type: application/json
+
+{
+  "workspaceId": "WORKSPACE_ID",
+  "action": "checkout",
+  "plan": "PRO"
+}
+
+### PayPal checkout
+POST http://localhost:3000/api/subscriptions/paypal
+Content-Type: application/json
+
+{
+  "workspaceId": "WORKSPACE_ID",
+  "plan": "AGENCY"
+}

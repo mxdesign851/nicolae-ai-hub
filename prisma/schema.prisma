@@ -49,29 +49,78 @@ enum Tone {
   CALM
 }
 
+enum AIProvider {
+  OPENAI
+  CLAUDE
+  GEMINI
+}
+
+enum SubscriptionProvider {
+  STRIPE
+  PAYPAL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  APPROVAL_PENDING
+  UNPAID
+}
+
+enum AuditAction {
+  REVIEW_IMPORTED
+  REVIEW_CREATED
+  REVIEW_DRAFTED
+  REVIEW_EDITED
+  REVIEW_APPROVED
+  REVIEW_STATUS_CHANGED
+  TAGS_UPDATED
+  SENTIMENT_UPDATED
+  BRAND_VOICE_UPDATED
+  MEMBER_ADDED
+  MEMBER_ROLE_UPDATED
+  MEMBER_REMOVED
+  SUBSCRIPTION_UPDATED
+}
+
 model User {
-  id            String               @id @default(cuid())
-  name          String?
-  email         String               @unique
-  hashedPassword String?
-  image         String?
-  memberships   WorkspaceMembership[]
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  id              String                @id @default(cuid())
+  name            String?
+  email           String                @unique
+  hashedPassword  String?
+  image           String?
+  isSuperAdmin    Boolean               @default(false)
+  memberships     WorkspaceMembership[]
+  draftedReviews  Review[]              @relation("DraftedBy")
+  approvedReviews Review[]              @relation("ApprovedBy")
+  editedReviews   Review[]              @relation("EditedBy")
+  generations     ReplyGeneration[]
+  auditLogs       ReviewAuditLog[]
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 }
 
 model Workspace {
-  id             String               @id @default(cuid())
-  name           String
-  plan           Plan                 @default(FREE)
-  aiGenerationsUsed Int               @default(0)
-  monthBucket    String               @default("1970-01")
-  memberships    WorkspaceMembership[]
-  locations      Location[]
-  reviews        Review[]
-  brandVoice     BrandVoice?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  id                String                @id @default(cuid())
+  name              String
+  slug              String?               @unique
+  plan              Plan                  @default(FREE)
+  aiGenerationsUsed Int                   @default(0)
+  monthBucket       String                @default("1970-01")
+  gracePeriodEndsAt DateTime?
+  memberships       WorkspaceMembership[]
+  locations         Location[]
+  reviews           Review[]
+  brandVoice        BrandVoice?
+  sources           SourceConnection[]
+  generations       ReplyGeneration[]
+  auditLogs         ReviewAuditLog[]
+  subscription      Subscription?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 }
 
 model WorkspaceMembership {
@@ -79,10 +128,12 @@ model WorkspaceMembership {
   userId      String
   workspaceId String
   role        Role      @default(MEMBER)
+  joinedAt    DateTime  @default(now())
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
+  @@index([workspaceId, role])
 }
 
 model Location {
@@ -94,51 +145,134 @@ model Location {
   workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   reviews     Review[]
   createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([workspaceId, name])
 }
 
 model Review {
-  id          String       @id @default(cuid())
-  workspaceId String
-  locationId  String
-  source      ReviewSource
-  authorName  String
-  rating      Int
-  text        String
-  reviewUrl   String?
-  reviewDate  DateTime
-  language    String?
-  status      ReviewStatus @default(NEW)
-  tags        String[]
-  sentiment   Sentiment    @default(NEU)
-  aiReplyDraft String?
-  createdAt   DateTime     @default(now())
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  location    Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  id            String            @id @default(cuid())
+  workspaceId   String
+  locationId    String
+  source        ReviewSource
+  authorName    String
+  rating        Int
+  text          String
+  reviewUrl     String?
+  reviewDate    DateTime
+  language      String?
+  status        ReviewStatus      @default(NEW)
+  tags          String[]          @default([])
+  sentiment     Sentiment         @default(NEU)
+  replyDraft    String?
+  approvedReply String?
+  draftedById   String?
+  draftedAt     DateTime?
+  approvedById  String?
+  approvedAt    DateTime?
+  editedById    String?
+  editedAt      DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  workspace     Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  location      Location          @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  draftedBy     User?             @relation("DraftedBy", fields: [draftedById], references: [id], onDelete: SetNull)
+  approvedBy    User?             @relation("ApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  editedBy      User?             @relation("EditedBy", fields: [editedById], references: [id], onDelete: SetNull)
+  generations   ReplyGeneration[]
+  auditLogs     ReviewAuditLog[]
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, source])
+  @@index([workspaceId, sentiment])
+  @@index([workspaceId, rating])
+  @@index([workspaceId, reviewDate])
 }
 
 model BrandVoice {
-  id            String    @id @default(cuid())
-  workspaceId   String?
-  locationId    String?
-  tone          Tone      @default(PROFESSIONAL)
-  doList        String[]
-  dontList      String[]
-  examples      String[]
-  bannedWords   String[]
-  signOff       String?
-  workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  location      Location?  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  id          String     @id @default(cuid())
+  workspaceId String?
+  locationId  String?
+  tone        Tone       @default(PROFESSIONAL)
+  doList      String[]   @default([])
+  dontList    String[]   @default([])
+  examples    String[]   @default([])
+  bannedWords String[]   @default([])
+  signOff     String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  location    Location?  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@unique([workspaceId])
   @@unique([locationId])
 }
 
 model Subscription {
-  id               String   @id @default(cuid())
-  workspaceId      String   @unique
-  provider         String
-  externalId       String   @unique
-  status           String
-  currentPeriodEnd DateTime?
-  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id                String               @id @default(cuid())
+  workspaceId       String               @unique
+  provider          SubscriptionProvider
+  externalId        String?              @unique
+  status            SubscriptionStatus
+  plan              Plan                 @default(FREE)
+  currentPeriodEnd  DateTime?
+  gracePeriodEndsAt DateTime?
+  metadata          Json?
+  workspace         Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+}
+
+model ReplyGeneration {
+  id               String     @id @default(cuid())
+  workspaceId      String
+  reviewId         String
+  createdById      String
+  provider         AIProvider
+  model            String
+  promptVersion    String
+  length           String
+  targetLanguage   String?
+  escalation       Boolean    @default(true)
+  inputTokens      Int?
+  outputTokens     Int?
+  estimatedCostUsd Decimal?   @db.Decimal(10, 6)
+  replyText        String
+  createdAt        DateTime   @default(now())
+  workspace        Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  review           Review     @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  createdBy        User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([reviewId, createdAt])
+}
+
+model ReviewAuditLog {
+  id          String      @id @default(cuid())
+  workspaceId String
+  reviewId    String?
+  actorId     String
+  action      AuditAction
+  metadata    Json?
+  createdAt   DateTime    @default(now())
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  review      Review?     @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  actor       User        @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([reviewId, createdAt])
+}
+
+model SourceConnection {
+  id          String       @id @default(cuid())
+  workspaceId String
+  provider    ReviewSource
+  displayName String
+  status      String       @default("MANUAL")
+  config      Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, provider])
 }

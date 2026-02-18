@@ -2,7 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg: #0b1120;
+  --panel: #111827;
+  --panel-2: #0f172a;
+  --muted: #94a3b8;
+  --text: #e2e8f0;
+  --accent: #4f7cff;
+  --accent-2: #68e1fd;
+  --border: #27344f;
+}
+
+* {
+  border-color: var(--border);
+}
+
 body {
-  background: #0b1020;
-  color: #e6eaf2;
+  background: radial-gradient(circle at top right, #1a2440 0%, var(--bg) 45%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+.input {
+  @apply w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none transition;
+}
+
+.input:focus {
+  @apply border-blue-500 ring-2 ring-blue-500/40;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition;
+}
+
+.btn-primary {
+  @apply bg-blue-500 text-white hover:bg-blue-400;
+}
+
+.btn-secondary {
+  @apply border border-slate-700 bg-slate-900/70 text-slate-200 hover:bg-slate-800;
+}
+
+.card {
+  @apply rounded-xl border border-slate-800 bg-slate-900/70 shadow-sm;
+}
+
+.badge {
+  @apply inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-xs font-medium;
 }

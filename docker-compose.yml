@@ -8,10 +8,19 @@ services:
       POSTGRES_DB: review_reply_manager
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
   app:
     build: .
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/review_reply_manager
+      NEXTAUTH_URL: http://localhost:3000
+      APP_URL: http://localhost:3000
     depends_on:
       - db
     ports:
       - "3000:3000"
+
+volumes:
+  postgres_data:
