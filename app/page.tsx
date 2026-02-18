@@ -211,7 +211,7 @@ export default function LandingPage() {
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {testimonials.map((item) => (
             <article key={item.name} className="card p-5">
-              <p className="text-sm leading-6 text-slate-200">"{item.quote}"</p>
+              <p className="text-sm leading-6 text-slate-200">&quot;{item.quote}&quot;</p>
               <p className="mt-4 font-semibold">{item.name}</p>
               <p className="text-xs uppercase tracking-wide text-slate-400">{item.role}</p>
             </article>
