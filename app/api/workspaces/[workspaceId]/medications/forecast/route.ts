@@ -42,7 +42,7 @@ function buildFallbackForecast(input: {
   horizonDays: number;
   projected: ReturnType<typeof mapPrismaMedicationItem>[];
   alerts: ReturnType<typeof calculateMedicationAlerts>;
-}) {
+}): z.infer<typeof responseSchema> {
   const byId = new Map(input.projected.map((item) => [item.id, item]));
   const priorityOrders = input.alerts
     .filter((alert) => alert.type === 'OUT_OF_STOCK' || alert.type === 'LOW_STOCK')
@@ -61,7 +61,7 @@ function buildFallbackForecast(input: {
         recommendedQuantity,
         estimatedUnitPriceRon,
         estimatedTotalRon,
-        urgency: alert.type === 'OUT_OF_STOCK' ? ('high' as const) : ('medium' as const)
+        urgency: (alert.type === 'OUT_OF_STOCK' ? 'high' : 'medium') as 'high' | 'medium' | 'low'
       };
     });
 
@@ -196,7 +196,7 @@ export async function POST(request: Request, { params }: Params) {
       alerts
     });
 
-    let validated = fallbackForecast;
+    let validated: z.infer<typeof responseSchema> = fallbackForecast;
     let model: string | null = null;
     let fallbackRulesUsed = true;
     try {
