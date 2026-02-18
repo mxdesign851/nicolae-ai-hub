@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
+import { resolvePublicAppUrl } from '@/lib/public-url';
 
 function toSignInRedirect(request: Request) {
   const url = new URL(request.url);
   const error = url.searchParams.get('error');
   const callbackUrl = url.searchParams.get('callbackUrl');
 
-  const destination = new URL('/sign-in', url.origin);
+  const baseUrl = resolvePublicAppUrl(request) ?? url;
+  const destination = new URL('/sign-in', baseUrl);
   if (error) destination.searchParams.set('error', error);
   if (callbackUrl) destination.searchParams.set('callbackUrl', callbackUrl);
 

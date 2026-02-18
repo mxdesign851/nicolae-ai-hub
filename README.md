@@ -180,6 +180,7 @@ App: `http://localhost:3000`
 See `.env.example` for all required keys:
 
 - Core: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `APP_URL`
+- Optional Railway helper: `RAILWAY_PUBLIC_DOMAIN`
 - AI: `OPENAI_API_KEY`, `OPENAI_MODEL`, optional Claude/Gemini keys
 - Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_AGENCY`
 - PayPal: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_ENV`, `PAYPAL_PLAN_PRO`, `PAYPAL_PLAN_AGENCY`
@@ -238,6 +239,7 @@ Key routes:
 ### Railway
 1. Create PostgreSQL service.
 2. Set env vars from `.env.example`.
+   - Ensure `APP_URL` and `NEXTAUTH_URL` use your public HTTPS domain (for example `https://your-app.up.railway.app`).
 3. Run Prisma migrate on deploy (`npx prisma migrate deploy`).
 4. Start command: `npm run start`.
 

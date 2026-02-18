@@ -8,11 +8,11 @@ type LogoProps = {
 
 export function Logo({ className, withWordmark = true, size = 'md' }: LogoProps) {
   const iconClass = size === 'lg' ? 'h-14 w-14' : size === 'sm' ? 'h-7 w-7' : 'h-9 w-9';
-  const titleClass = size === 'lg' ? 'text-xl font-semibold text-slate-100' : 'text-sm font-semibold text-slate-100';
+  const titleClass = size === 'lg' ? 'text-xl font-semibold' : 'text-sm font-semibold';
   const domainClass =
     size === 'lg'
-      ? 'text-xs uppercase tracking-[0.22em] text-slate-400'
-      : 'text-[11px] uppercase tracking-[0.18em] text-slate-400';
+      ? 'text-xs uppercase tracking-[0.22em] opacity-70'
+      : 'text-[11px] uppercase tracking-[0.18em] opacity-70';
 
   return (
     <div className={cn('inline-flex items-center gap-2', className)}>
