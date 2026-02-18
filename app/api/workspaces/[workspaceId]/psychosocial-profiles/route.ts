@@ -107,12 +107,21 @@ function buildPsychosocialAIPrompt(input: {
   hopeMotivation: boolean;
   observations: string | null;
 }) {
-  return `Esti asistent pentru fise psihosociale in centru de ingrijire.
-Scopul este ORIENTATIV de sprijin pentru personal.
-Nu formula diagnostice clinice. Nu folosi expresii de diagnostic (ex: "depresie severa").
-Foloseste formulare observationale si de suport.
+  return `Esti asistent pentru fise psihosociale orientative in centru de ingrijire.
 
-Date reale evaluare:
+IMPORTANT - CE NU TREBUIE SA FACI:
+- NU pune diagnostice medicale sau psihiatrice
+- NU foloseste expresii ca "are depresie", "are anxietate generalizata", "tulburare de personalitate", "depresie severa", "PTSD"
+- NU eticheta beneficiarul cu termeni clinici
+
+CE TREBUIE SA FACI:
+- Ofera profil ORIENTATIV de sprijin
+- Foloseste formulari observationale: "prezinta semne de retragere si nevoie de sustinere", "se observa tendinta de izolare", "manifesta dificultati de adaptare"
+- Ajuta personalul sa stie cum sa se comporte
+- Ofera recomandari practice pentru monitorizare
+- Creeaza continut clar si util pentru fisa de dosar
+
+Date evaluare beneficiar:
 - Beneficiar: ${input.internalName}
 - Varsta: ${input.age}
 - Sex: ${input.sex}
@@ -136,21 +145,23 @@ Date reale evaluare:
 - Indicatori emotionali: tristete=${input.sadnessFrequent}, anxietate=${input.anxiety}, furie=${input.anger}, apatie=${input.apathy}, speranta/motivatie=${input.hopeMotivation}
 - Observatii suplimentare: ${input.observations ?? 'fara observatii suplimentare'}
 
-Returneaza STRICT JSON (fara markdown) cu forma:
+Returneaza STRICT JSON (fara markdown) cu structura:
 {
-  "contextPersonal": "text 2-4 fraze",
-  "emotionalProfile": "text 2-4 fraze",
-  "mainNeeds": ["nevoie 1", "nevoie 2"],
-  "risks": ["risc 1", "risc 2"],
-  "staffRecommendations": ["recomandare 1", "recomandare 2"],
-  "supportPlan": ["pas 1", "pas 2"]
+  "contextPersonal": "2-4 fraze: situatie de viata, vulnerabilitati observate",
+  "emotionalProfile": "2-4 fraze: nivel de stres observat, adaptare, rezilienta",
+  "mainNeeds": ["nevoie 1: atasament/stabilitate/tratament/integrare sociala", "nevoie 2", ...],
+  "risks": ["risc 1: abandon/izolare/dependenta/retragere", "risc 2", ...],
+  "staffRecommendations": ["recomandare 1: ton calm/structura/evitarea conflictului/activitati", "recomandare 2", ...],
+  "supportPlan": ["pas 1: consiliere/reintegrare/medical/familie", "pas 2", ...]
 }
 
 Reguli:
 - limba romana
 - max 7 puncte per lista
-- recomandari concrete pentru personal (ton calm, structura, evitarea conflictului, activitati recomandate cand relevant)
-- fara etichete de diagnostic.`;
+- recomandari concrete pentru personal (ton calm, structura, evitarea conflictului, activitati recomandate)
+- in staffRecommendations include: cum sa se comporte, ce sa evite, ce activitati sa incurajeze
+- in supportPlan include pasi urmatori: consiliere, reintegrare, medical, familie
+- ABSOLUT FARA etichete de diagnostic sau termeni clinici.`;
 }
 
 function serializeProfile(profile: {
