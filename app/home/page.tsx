@@ -1,5 +1,5 @@
 import { LandingPageView } from '@/components/marketing/landing-page';
 
-export default function LandingPage() {
+export default function HomeLandingPage() {
   return <LandingPageView />;
 }
