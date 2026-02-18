@@ -19,7 +19,7 @@ ReplyZen helps businesses and agencies manage imported reviews (Google/Facebook/
 - Review inbox with filters: status, rating, sentiment, tags, source, date range
 - Manual review add + CSV import
 - AI reply generation with:
-  - provider selection (`openai`, `claude` stub, `gemini` stub)
+  - provider selection (`openai`, `claude`, `gemini`)
   - length selection (`short`, `medium`, `long`)
   - optional language target
   - escalation rules for low-rating/complaint content
@@ -76,7 +76,8 @@ Core Prisma models:
 `lib/ai.ts` defines:
 - `interface AIProvider { generateReply(input): output }`
 - OpenAI implementation
-- Claude and Gemini stubs with TODO notes and env keys
+- Claude (Anthropic SDK) implementation
+- Gemini (Google Generative AI SDK) implementation
 
 ---
 
@@ -181,7 +182,7 @@ See `.env.example` for all required keys:
 
 - Core: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `APP_URL`
 - Optional Railway helper: `RAILWAY_PUBLIC_DOMAIN`
-- AI: `OPENAI_API_KEY`, `OPENAI_MODEL`, optional Claude/Gemini keys
+- AI: `OPENAI_API_KEY`, `OPENAI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `GEMINI_API_KEY`, `GEMINI_MODEL`
 - Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_AGENCY`
 - PayPal: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_ENV`, `PAYPAL_PLAN_PRO`, `PAYPAL_PLAN_AGENCY`
 - Optional cron protection: `CRON_SECRET`

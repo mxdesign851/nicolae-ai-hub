@@ -1,9 +1,14 @@
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIProvider as ProviderEnum } from '@prisma/client';
+import OpenAI from 'openai';
 import { HttpError } from '@/lib/http';
 
 export type Provider = 'openai' | 'claude' | 'gemini';
-export const REPLY_PROMPT_VERSION = 'v1.0.0';
+export const REPLY_PROMPT_VERSION = 'v1.1.0';
+
+const DEFAULT_MAX_TOKENS = 350;
+const DEFAULT_TEMPERATURE = 0.6;
 
 export type GenerateReplyInput = {
   prompt: string;
@@ -23,10 +28,15 @@ export interface AIProvider {
   generateReply(input: GenerateReplyInput): Promise<GenerateReplyOutput>;
 }
 
-function estimateOpenAICost(inputTokens = 0, outputTokens = 0) {
-  // gpt-4o-mini list price snapshot (USD per 1M tokens); configurable if needed.
-  const inputPerMillion = 0.15;
-  const outputPerMillion = 0.6;
+function ensureText(text: string, providerName: string) {
+  const cleaned = text.trim();
+  if (!cleaned) {
+    throw new HttpError(502, `${providerName} returned empty response`);
+  }
+  return cleaned;
+}
+
+function estimateCostUsd(inputTokens = 0, outputTokens = 0, inputPerMillion = 0.15, outputPerMillion = 0.6) {
   return Number(((inputTokens / 1_000_000) * inputPerMillion + (outputTokens / 1_000_000) * outputPerMillion).toFixed(6));
 }
 
@@ -46,11 +56,11 @@ class OpenAIReplyProvider implements AIProvider {
     const completion = await this.client.chat.completions.create({
       model: this.model,
       messages: [{ role: 'user', content: input.prompt }],
-      temperature: input.temperature ?? 0.6,
-      max_tokens: input.maxTokens ?? 350
+      temperature: input.temperature ?? DEFAULT_TEMPERATURE,
+      max_tokens: input.maxTokens ?? DEFAULT_MAX_TOKENS
     });
 
-    const text = completion.choices[0]?.message?.content?.trim() ?? '';
+    const text = ensureText(completion.choices[0]?.message?.content ?? '', 'OpenAI');
     const inputTokens = completion.usage?.prompt_tokens;
     const outputTokens = completion.usage?.completion_tokens;
     return {
@@ -58,24 +68,82 @@ class OpenAIReplyProvider implements AIProvider {
       model: this.model,
       inputTokens,
       outputTokens,
-      estimatedCostUsd: estimateOpenAICost(inputTokens, outputTokens)
+      estimatedCostUsd: estimateCostUsd(inputTokens, outputTokens, 0.15, 0.6)
     };
   }
 }
 
 class ClaudeReplyProvider implements AIProvider {
-  async generateReply(): Promise<GenerateReplyOutput> {
-    // TODO: Wire Anthropic SDK request/usage extraction.
-    // Required env keys: ANTHROPIC_API_KEY, ANTHROPIC_MODEL.
-    throw new HttpError(501, 'Claude provider stub not implemented yet. Configure ANTHROPIC_API_KEY and ANTHROPIC_MODEL.');
+  private client: Anthropic;
+  private model: string;
+
+  constructor() {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new HttpError(500, 'Missing ANTHROPIC_API_KEY');
+    }
+    this.client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    this.model = process.env.ANTHROPIC_MODEL ?? 'claude-3-5-sonnet-20241022';
+  }
+
+  async generateReply(input: GenerateReplyInput): Promise<GenerateReplyOutput> {
+    const completion = await this.client.messages.create({
+      model: this.model,
+      temperature: input.temperature ?? DEFAULT_TEMPERATURE,
+      max_tokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
+      messages: [{ role: 'user', content: input.prompt }]
+    });
+
+    const text = ensureText(
+      completion.content
+        .map((part) => (part.type === 'text' ? part.text : ''))
+        .join('\n')
+        .trim(),
+      'Claude'
+    );
+    const inputTokens = completion.usage.input_tokens;
+    const outputTokens = completion.usage.output_tokens;
+    return {
+      text,
+      model: this.model,
+      inputTokens,
+      outputTokens,
+      estimatedCostUsd: estimateCostUsd(inputTokens, outputTokens, 3, 15)
+    };
   }
 }
 
 class GeminiReplyProvider implements AIProvider {
-  async generateReply(): Promise<GenerateReplyOutput> {
-    // TODO: Wire Gemini REST/OpenAI-compatible call and token usage extraction.
-    // Required env keys: GEMINI_API_KEY, GEMINI_MODEL (optional GEMINI_BASE_URL).
-    throw new HttpError(501, 'Gemini provider stub not implemented yet. Configure GEMINI_API_KEY and GEMINI_MODEL.');
+  private client: GoogleGenerativeAI;
+  private model: string;
+
+  constructor() {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new HttpError(500, 'Missing GEMINI_API_KEY');
+    }
+    this.client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    this.model = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+  }
+
+  async generateReply(input: GenerateReplyInput): Promise<GenerateReplyOutput> {
+    const model = this.client.getGenerativeModel({ model: this.model });
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: input.prompt }] }],
+      generationConfig: {
+        temperature: input.temperature ?? DEFAULT_TEMPERATURE,
+        maxOutputTokens: input.maxTokens ?? DEFAULT_MAX_TOKENS
+      }
+    });
+    const response = result.response;
+    const text = ensureText(response.text(), 'Gemini');
+    const inputTokens = response.usageMetadata?.promptTokenCount;
+    const outputTokens = response.usageMetadata?.candidatesTokenCount;
+    return {
+      text,
+      model: this.model,
+      inputTokens,
+      outputTokens,
+      estimatedCostUsd: estimateCostUsd(inputTokens, outputTokens, 0.075, 0.3)
+    };
   }
 }
 
@@ -96,9 +164,47 @@ export function createProvider(provider: Provider): AIProvider {
   }
 }
 
-export async function generateText({ provider, prompt }: { provider: Provider; prompt: string }) {
+export type GenerateTextArgs = {
+  provider: Provider;
+  prompt: string;
+  maxTokens?: number;
+  temperature?: number;
+};
+
+export async function generateText({ provider, prompt, maxTokens, temperature }: GenerateTextArgs) {
   const impl = createProvider(provider);
-  return impl.generateReply({ prompt, maxTokens: 350, temperature: 0.6 });
+  return impl.generateReply({
+    prompt,
+    maxTokens: maxTokens ?? DEFAULT_MAX_TOKENS,
+    temperature: temperature ?? DEFAULT_TEMPERATURE
+  });
+}
+
+export function extractJsonObject<T>(raw: string): T {
+  const candidates: string[] = [];
+  const trimmed = raw.trim();
+  if (trimmed) candidates.push(trimmed);
+
+  const fencedMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fencedMatch?.[1]) {
+    candidates.unshift(fencedMatch[1].trim());
+  }
+
+  const firstBrace = raw.indexOf('{');
+  const lastBrace = raw.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(raw.slice(firstBrace, lastBrace + 1).trim());
+  }
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate) as T;
+    } catch {
+      continue;
+    }
+  }
+
+  throw new HttpError(502, 'AI returned invalid JSON payload');
 }
 
 export function buildReplyPrompt(input: {

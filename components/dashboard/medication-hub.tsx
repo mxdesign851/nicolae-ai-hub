@@ -49,6 +49,22 @@ type MedicationPreference = {
   expiryAlertDays: number;
 };
 
+type ForecastPriority = {
+  name: string;
+  reason: string;
+  recommendedQuantity: number;
+  estimatedUnitPriceRon: number | null;
+  estimatedTotalRon: number | null;
+  urgency: 'high' | 'medium' | 'low';
+};
+
+type AIForecastPayload = {
+  summary: string;
+  totalEstimatedBudgetRon: number | null;
+  priorityOrders: ForecastPriority[];
+  recommendations: string[];
+};
+
 type Props = {
   workspaceId: string;
   initialItems: MedicationItem[];
@@ -114,10 +130,14 @@ export function MedicationHub({
   const [items, setItems] = useState(initialItems);
   const [alerts, setAlerts] = useState(initialAlerts);
   const [summary, setSummary] = useState(initialSummary);
+  const [forecast, setForecast] = useState<AIForecastPayload | null>(null);
+  const [forecastModel, setForecastModel] = useState<string | null>(null);
   const [phonePreview, setPhonePreview] = useState<string | null>(initialPhoneNotificationPreview);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [forecastProvider, setForecastProvider] = useState<'openai' | 'claude' | 'gemini'>('openai');
+  const [forecastHorizonDays, setForecastHorizonDays] = useState(30);
 
   const [preferenceDraft, setPreferenceDraft] = useState({
     phoneNumber: initialPreference.phoneNumber ?? '',
@@ -273,6 +293,33 @@ export function MedicationHub({
         await reloadData();
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Eroare la salvare preferinte');
+      }
+    });
+  }
+
+  function runAIForecast(event: FormEvent) {
+    event.preventDefault();
+    resetNotices();
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/workspaces/${workspaceId}/medications/forecast`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: forecastProvider,
+            horizonDays: forecastHorizonDays
+          })
+        });
+        const json = await response.json();
+        if (!response.ok) {
+          setError(json.error || 'Nu am putut rula predictia AI');
+          return;
+        }
+        setForecast(json.forecast);
+        setForecastModel(json.model || null);
+        setMessage('Predictie AI generata din datele reale ale stocului.');
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'Eroare la predictia AI');
       }
     });
   }
@@ -481,6 +528,59 @@ export function MedicationHub({
         </article>
 
         <div className="space-y-5">
+          <article className="card p-4">
+            <h3 className="text-lg font-semibold">Predictie AI aprovizionare</h3>
+            <p className="mt-1 text-sm text-slate-400">
+              Ruleaza forecast cu OpenAI, Claude sau Gemini pe stocurile reale din sistem.
+            </p>
+            <form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={runAIForecast}>
+              <select className="input" value={forecastProvider} onChange={(event) => setForecastProvider(event.target.value as typeof forecastProvider)}>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude</option>
+                <option value="gemini">Gemini</option>
+              </select>
+              <input
+                className="input"
+                type="number"
+                min={7}
+                max={120}
+                value={forecastHorizonDays}
+                onChange={(event) => setForecastHorizonDays(Math.max(7, Math.min(120, Number(event.target.value) || 30)))}
+              />
+              <button className="btn btn-primary sm:col-span-2" disabled={pending}>
+                {pending ? 'Se ruleaza...' : 'Genereaza forecast AI'}
+              </button>
+            </form>
+            {forecast ? (
+              <div className="mt-3 space-y-2 rounded-lg border border-slate-700 bg-slate-950/60 p-3 text-sm">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Model: {forecastModel || '-'} | Buget estimat: {formatCurrency(forecast.totalEstimatedBudgetRon)}
+                </p>
+                <p>{forecast.summary}</p>
+                <div>
+                  <p className="font-medium">Prioritati</p>
+                  <ul className="mt-1 space-y-1 text-xs text-slate-200">
+                    {forecast.priorityOrders.slice(0, 6).map((order) => (
+                      <li key={`${order.name}-${order.reason}`}>
+                        - [{order.urgency}] {order.name}: {order.recommendedQuantity} u. ({formatCurrency(order.estimatedTotalRon)}) - {order.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {forecast.recommendations.length ? (
+                  <div>
+                    <p className="font-medium">Recomandari</p>
+                    <ul className="mt-1 list-disc pl-5 text-xs text-slate-200">
+                      {forecast.recommendations.map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </article>
+
           <article className="card p-4">
             <h3 className="text-lg font-semibold">Notificari telefon</h3>
             <p className="mt-1 text-sm text-slate-400">

@@ -21,6 +21,9 @@ export default async function PsychosocialPage({ params }: { params: { workspace
         <p className="mt-1 text-sm text-slate-400">
           Modul orientativ de sprijin pentru personal: monitorizare, recomandari comportamentale si fisa PDF pentru dosar.
         </p>
+        <p className="mt-2 text-xs text-slate-500">
+          Generator AI activ pe OpenAI / Claude / Gemini. Seteaza cheile API in fisierul de mediu al aplicatiei.
+        </p>
       </section>
       <PsychosocialProfileManager
         workspaceId={params.workspaceId}

@@ -2,9 +2,9 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'ReplyZen | AI Review Reply Manager',
-  description: 'Multi-tenant SaaS for AI-generated customer review replies with approvals, analytics, and billing.',
-  metadataBase: new URL('https://reply-zen.com')
+  title: 'Casa Nicolae | HYAPP AI Hub',
+  description: 'Aplicatie interna cu AI pentru medicamente, monitorizare si profil psihosocial orientativ.',
+  metadataBase: new URL('https://casa-nicolae.local')
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

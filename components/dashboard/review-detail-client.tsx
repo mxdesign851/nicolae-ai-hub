@@ -119,8 +119,8 @@ export function ReviewDetailClient({ workspaceId, role, review }: Props) {
           <div className="grid gap-3 md:grid-cols-2">
             <select className="input" value={provider} onChange={(e) => setProvider(e.target.value as typeof provider)}>
               <option value="openai">OpenAI</option>
-              <option value="claude">Claude (stub)</option>
-              <option value="gemini">Gemini (stub)</option>
+              <option value="claude">Claude</option>
+              <option value="gemini">Gemini</option>
             </select>
             <select className="input" value={length} onChange={(e) => setLength(e.target.value as typeof length)}>
               <option value="short">Short</option>

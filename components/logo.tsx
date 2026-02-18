@@ -16,16 +16,41 @@ export function Logo({ className, withWordmark = true, size = 'md' }: LogoProps)
 
   return (
     <div className={cn('inline-flex items-center gap-2', className)}>
-      <svg viewBox="0 0 64 64" aria-label="ReplyZen logo" className={iconClass}>
-        <rect x="4" y="4" width="56" height="56" rx="14" fill="#111826" />
-        <path d="M16 21h19c7 0 12 5 12 12s-5 12-12 12H16V21Z" fill="#4F7CFF" />
-        <path d="M23 28h12a5 5 0 0 1 0 10H23V28Z" fill="#0D1527" />
-        <circle cx="46" cy="46" r="6" fill="#68E1FD" />
+      <svg viewBox="0 0 200 200" aria-label="Casa Nicolae HYAPP logo" className={iconClass}>
+        <g fill="#b274ad">
+          <ellipse cx="100" cy="48" rx="34" ry="46" />
+          <ellipse cx="55" cy="85" rx="34" ry="46" transform="rotate(-40 55 85)" />
+          <ellipse cx="145" cy="85" rx="34" ry="46" transform="rotate(40 145 85)" />
+          <ellipse cx="70" cy="145" rx="34" ry="46" transform="rotate(28 70 145)" />
+          <ellipse cx="130" cy="145" rx="34" ry="46" transform="rotate(-28 130 145)" />
+        </g>
+        <circle cx="100" cy="104" r="39" fill="#e8e8e8" />
+        <ellipse cx="90" cy="94" rx="5.8" ry="8" fill="#ad69a4" />
+        <ellipse cx="110" cy="94" rx="5.8" ry="8" fill="#ad69a4" />
+        <path d="M82 113c8 19 28 19 36 0" stroke="#ad69a4" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+        <path d="M76 82c8-11 19-16 31-17" stroke="#ffffff" strokeWidth="3.1" fill="none" strokeLinecap="round" />
+        <path d="M125 114c13 0 23-2 33-7" stroke="#ffffff" strokeWidth="3.1" fill="none" strokeLinecap="round" />
+        <path d="M88 136c-7 0-14 3-20 10" stroke="#ffffff" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+        <text x="100" y="34" textAnchor="middle" fill="#ffff3b" fontSize="24" fontWeight="700">
+          H
+        </text>
+        <text x="56" y="92" textAnchor="middle" fill="#ffff3b" fontSize="24" fontWeight="700">
+          Y
+        </text>
+        <text x="145" y="92" textAnchor="middle" fill="#ffff3b" fontSize="24" fontWeight="700">
+          A
+        </text>
+        <text x="69" y="149" textAnchor="middle" fill="#ffff3b" fontSize="24" fontWeight="700">
+          P
+        </text>
+        <text x="130" y="149" textAnchor="middle" fill="#ffff3b" fontSize="24" fontWeight="700">
+          P
+        </text>
       </svg>
       {withWordmark ? (
         <div className="leading-tight">
-          <p className={titleClass}>ReplyZen</p>
-          <p className={domainClass}>reply-zen.com</p>
+          <p className={titleClass}>Casa Nicolae</p>
+          <p className={domainClass}>HYAPP AI Hub</p>
         </div>
       ) : null}
     </div>

@@ -105,6 +105,8 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [aiProvider, setAiProvider] = useState<'openai' | 'claude' | 'gemini'>('openai');
+  const [lastModel, setLastModel] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     internalName: '',
@@ -164,6 +166,7 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
     startTransition(async () => {
       try {
         const payload = {
+          provider: aiProvider,
           internalName: form.internalName,
           age: Number(form.age),
           sex: form.sex,
@@ -206,7 +209,12 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
           return;
         }
 
-        setMessage('Profil psihosocial salvat. PDF-ul poate fi descarcat imediat.');
+        setLastModel(json.ai?.model || null);
+        setMessage(
+          json.ai?.fallbackRulesUsed
+            ? 'Profil salvat. AI a raspuns partial, s-a aplicat si fallback pe reguli.'
+            : 'Profil psihosocial salvat cu AI. PDF-ul poate fi descarcat imediat.'
+        );
         setForm((prev) => ({
           ...prev,
           internalName: '',
@@ -234,6 +242,17 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
     <div className="space-y-5">
       <section className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
         Scopul modulului este orientativ de sprijin, monitorizare si recomandari pentru personal. Nu emite diagnostice medicale.
+      </section>
+      <section className="rounded-lg border border-slate-700 bg-slate-950/60 px-4 py-3 text-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-slate-300">Provider AI:</span>
+          <select className="input max-w-[200px]" value={aiProvider} onChange={(event) => setAiProvider(event.target.value as typeof aiProvider)}>
+            <option value="openai">OpenAI</option>
+            <option value="claude">Claude</option>
+            <option value="gemini">Gemini</option>
+          </select>
+          <span className="text-xs text-slate-400">Model curent: {lastModel || 'inca nefolosit'}</span>
+        </div>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">

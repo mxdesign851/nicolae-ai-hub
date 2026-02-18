@@ -2,6 +2,7 @@ import { Role } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireApiUserOrThrow } from '@/lib/api-auth';
+import { extractJsonObject, generateText, Provider } from '@/lib/ai';
 import { jsonError, HttpError } from '@/lib/http';
 import {
   APPETITE_LEVELS,
@@ -23,6 +24,7 @@ type Params = { params: { workspaceId: string } };
 const optionalBooleanSchema = z.union([z.boolean(), z.null()]).optional();
 
 const psychosocialSchema = z.object({
+  provider: z.enum(['openai', 'claude', 'gemini']).default('openai'),
   internalName: z.string().min(2).max(80),
   age: z.coerce.number().int().min(0).max(120),
   sex: z.string().min(1).max(32),
@@ -54,12 +56,100 @@ const psychosocialSchema = z.object({
   signatureResponsible: z.string().max(120).optional().nullable()
 });
 
+const aiGeneratedSchema = z.object({
+  contextPersonal: z.string().min(20).max(2500),
+  emotionalProfile: z.string().min(20).max(2500),
+  mainNeeds: z.array(z.string().min(2).max(180)).min(1).max(7),
+  risks: z.array(z.string().min(2).max(180)).min(1).max(7),
+  staffRecommendations: z.array(z.string().min(2).max(220)).min(1).max(9),
+  supportPlan: z.array(z.string().min(2).max(220)).min(1).max(7)
+});
+
 function parseAssessmentDate(value: string) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     throw new HttpError(400, 'Data evaluarii este invalida');
   }
   return parsed;
+}
+
+function boolText(value: boolean | null | undefined) {
+  if (value === null || value === undefined) return 'nespecificat';
+  return value ? 'da' : 'nu';
+}
+
+function buildPsychosocialAIPrompt(input: {
+  internalName: string;
+  age: number;
+  sex: string;
+  locationCenter: string;
+  assessmentDate: Date;
+  responsiblePerson: string;
+  familySupport: string;
+  housingStatus: string;
+  familyContactFrequency: string | null;
+  institutionalizationHistory: string | null;
+  knownDiseases: boolean | null | undefined;
+  medicationInfo: string | null;
+  limitations: string | null;
+  previousPsychEvaluation: boolean | null | undefined;
+  communicationLevel: string;
+  stressReaction: string;
+  relationshipStyle: string;
+  autonomyLevel: string;
+  sleepQuality: string;
+  appetite: string;
+  sadnessFrequent: boolean;
+  anxiety: boolean;
+  anger: boolean;
+  apathy: boolean;
+  hopeMotivation: boolean;
+  observations: string | null;
+}) {
+  return `Esti asistent pentru fise psihosociale in centru de ingrijire.
+Scopul este ORIENTATIV de sprijin pentru personal.
+Nu formula diagnostice clinice. Nu folosi expresii de diagnostic (ex: "depresie severa").
+Foloseste formulare observationale si de suport.
+
+Date reale evaluare:
+- Beneficiar: ${input.internalName}
+- Varsta: ${input.age}
+- Sex: ${input.sex}
+- Locatie/Centru: ${input.locationCenter}
+- Data evaluarii: ${input.assessmentDate.toISOString()}
+- Responsabil: ${input.responsiblePerson}
+- Familie: ${input.familySupport}
+- Locuire: ${input.housingStatus}
+- Contact familie: ${input.familyContactFrequency ?? 'nespecificat'}
+- Istoric institutionalizare: ${input.institutionalizationHistory ?? 'nespecificat'}
+- Boli cunoscute: ${boolText(input.knownDiseases)}
+- Medicatie: ${input.medicationInfo ?? 'nespecificat'}
+- Limitari: ${input.limitations ?? 'nespecificat'}
+- Evaluare psihologica anterioara: ${boolText(input.previousPsychEvaluation)}
+- Comunicare: ${input.communicationLevel}
+- Reactie la stres: ${input.stressReaction}
+- Relationare: ${input.relationshipStyle}
+- Autonomie: ${input.autonomyLevel}
+- Somn: ${input.sleepQuality}
+- Apetit: ${input.appetite}
+- Indicatori emotionali: tristete=${input.sadnessFrequent}, anxietate=${input.anxiety}, furie=${input.anger}, apatie=${input.apathy}, speranta/motivatie=${input.hopeMotivation}
+- Observatii suplimentare: ${input.observations ?? 'fara observatii suplimentare'}
+
+Returneaza STRICT JSON (fara markdown) cu forma:
+{
+  "contextPersonal": "text 2-4 fraze",
+  "emotionalProfile": "text 2-4 fraze",
+  "mainNeeds": ["nevoie 1", "nevoie 2"],
+  "risks": ["risc 1", "risc 2"],
+  "staffRecommendations": ["recomandare 1", "recomandare 2"],
+  "supportPlan": ["pas 1", "pas 2"]
+}
+
+Reguli:
+- limba romana
+- max 7 puncte per lista
+- recomandari concrete pentru personal (ton calm, structura, evitarea conflictului, activitati recomandate cand relevant)
+- fara etichete de diagnostic.`;
 }
 
 function serializeProfile(profile: {
@@ -138,7 +228,7 @@ export async function POST(request: Request, { params }: Params) {
     const photoReference = sanitizeOptionalText(parsed.photoReference, 250);
     const signatureResponsible = sanitizeOptionalText(parsed.signatureResponsible, 120);
 
-    const generated = generatePsychosocialProfile({
+    const normalizedInput = {
       internalName,
       age: parsed.age,
       sex,
@@ -165,7 +255,23 @@ export async function POST(request: Request, { params }: Params) {
       apathy: parsed.apathy,
       hopeMotivation: parsed.hopeMotivation,
       observations
+    };
+
+    const aiPrompt = buildPsychosocialAIPrompt(normalizedInput);
+    const generatedText = await generateText({
+      provider: parsed.provider as Provider,
+      prompt: aiPrompt,
+      maxTokens: 1200,
+      temperature: 0.2
     });
+
+    let generated = generatePsychosocialProfile(normalizedInput);
+    let usedFallback = false;
+    try {
+      generated = aiGeneratedSchema.parse(extractJsonObject(generatedText.text));
+    } catch {
+      usedFallback = true;
+    }
 
     const profile = await prisma.psychosocialProfile.create({
       data: {
@@ -209,7 +315,17 @@ export async function POST(request: Request, { params }: Params) {
       }
     });
 
-    return NextResponse.json({ profile: serializeProfile(profile) }, { status: 201 });
+    return NextResponse.json(
+      {
+        profile: serializeProfile(profile),
+        ai: {
+          provider: parsed.provider,
+          model: generatedText.model,
+          fallbackRulesUsed: usedFallback
+        }
+      },
+      { status: 201 }
+    );
   } catch (error) {
     return jsonError(error);
   }
