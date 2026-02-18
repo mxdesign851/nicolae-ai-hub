@@ -1,6 +1,7 @@
-import { Role } from '@prisma/client';
+import { AuditAction, Role } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { requireApiUserOrThrow } from '@/lib/api-auth';
+import { logAudit } from '@/lib/audit';
 import { jsonError, HttpError } from '@/lib/http';
 import { createSinglePagePdf } from '@/lib/pdf';
 import { prisma } from '@/lib/prisma';
@@ -23,6 +24,10 @@ function boolLabel(value: boolean | null) {
   return value ? 'Da' : 'Nu';
 }
 
+function consentLabel(value: boolean) {
+  return value ? 'Da' : 'Nu';
+}
+
 export async function GET(_: Request, { params }: Params) {
   try {
     const user = await requireApiUserOrThrow();
@@ -38,6 +43,16 @@ export async function GET(_: Request, { params }: Params) {
       throw new HttpError(404, 'Profilul nu a fost gasit');
     }
 
+    await logAudit({
+      workspaceId: params.workspaceId,
+      actorId: user.id,
+      action: AuditAction.PSYCHOSOCIAL_PDF_EXPORTED,
+      metadata: {
+        psychosocialProfileId: profile.id,
+        internalName: profile.internalName
+      }
+    });
+
     const sections = [
       {
         title: 'Date identificare',
@@ -45,7 +60,8 @@ export async function GET(_: Request, { params }: Params) {
           `Beneficiar: ${profile.internalName} | Varsta: ${profile.age} | Sex: ${profile.sex}`,
           `Locatie/Centru: ${profile.locationCenter}`,
           `Data evaluarii: ${profile.assessmentDate.toLocaleDateString('ro-RO')}`,
-          `Responsabil: ${profile.responsiblePerson}`
+          `Responsabil: ${profile.responsiblePerson}`,
+          `Poza pentru identificare: acord ${consentLabel(profile.photoConsent)}${profile.photoReference ? ` (ref: ${profile.photoReference})` : ''}.`
         ]
       },
       {
@@ -54,9 +70,12 @@ export async function GET(_: Request, { params }: Params) {
           `Familie: ${FAMILY_SUPPORT_LABELS[profile.familySupport]} | Locuire: ${HOUSING_STATUS_LABELS[profile.housingStatus]}`,
           `Contact cu familia: ${profile.familyContactFrequency || 'Nespecificat'}`,
           `Istoric institutionalizare: ${profile.institutionalizationHistory || 'Nespecificat'}`,
-          `Boli cunoscute: ${boolLabel(profile.knownDiseases)} | Evaluare psihologica anterioara: ${boolLabel(profile.previousPsychEvaluation)}`,
-          `Tratament/medicatie: ${profile.medicationInfo || 'Nespecificat'}`,
-          `Limitari/handicap: ${profile.limitations || 'Nespecificat'}`
+          `Date medicale (cu acord): ${consentLabel(profile.medicalConsent)}${profile.medicalConsentReference ? ` (ref: ${profile.medicalConsentReference})` : ''}`,
+          `Boli cunoscute: ${profile.medicalConsent ? boolLabel(profile.knownDiseases) : 'Omise (fara acord)'} | Evaluare psihologica anterioara: ${
+            profile.medicalConsent ? boolLabel(profile.previousPsychEvaluation) : 'Omisa (fara acord)'
+          }`,
+          `Tratament/medicatie: ${profile.medicalConsent ? profile.medicationInfo || 'Nespecificat' : 'Omis (fara acord)'}`,
+          `Limitari/handicap: ${profile.medicalConsent ? profile.limitations || 'Nespecificat' : 'Omise (fara acord)'}`
         ]
       },
       {

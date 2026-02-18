@@ -198,7 +198,7 @@ export function generatePsychosocialProfile(input: PsychosocialInput): Psychosoc
   const emotionalLoadScore = buildEmotionalLoadScore(input);
   if (input.sadnessFrequent || input.apathy || input.anxiety) {
     needs.add('consiliere emotionala regulata');
-    risks.add('risc de retragere si simptome depresive');
+    risks.add('risc de retragere si dispozitie scazuta, necesitand sustinere si monitorizare');
   }
   if (input.anger) {
     recommendations.add('validati emotiile inainte de corectarea comportamentului');

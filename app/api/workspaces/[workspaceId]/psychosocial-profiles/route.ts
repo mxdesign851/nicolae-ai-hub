@@ -1,8 +1,9 @@
-import { Role } from '@prisma/client';
+import { AuditAction, Role } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireApiUserOrThrow } from '@/lib/api-auth';
 import { extractJsonObject, generateText, Provider } from '@/lib/ai';
+import { logAudit } from '@/lib/audit';
 import { jsonError, HttpError } from '@/lib/http';
 import {
   APPETITE_LEVELS,
@@ -35,6 +36,8 @@ const psychosocialSchema = z.object({
   housingStatus: z.enum(HOUSING_STATUSES),
   familyContactFrequency: z.string().max(160).optional().nullable(),
   institutionalizationHistory: z.string().max(500).optional().nullable(),
+  medicalConsent: z.boolean().default(false),
+  medicalConsentReference: z.string().max(250).optional().nullable(),
   knownDiseases: optionalBooleanSchema,
   medicationInfo: z.string().max(500).optional().nullable(),
   limitations: z.string().max(500).optional().nullable(),
@@ -65,6 +68,41 @@ const aiGeneratedSchema = z.object({
   supportPlan: z.array(z.string().min(2).max(220)).min(1).max(7)
 });
 
+const DIAGNOSTIC_LANGUAGE_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
+  { pattern: /\bdiagnos(tic|tice|ticul|ticele)?\b/i, reason: 'mentions diagnosis' },
+  { pattern: /\bICD\b|\bDSM\b/i, reason: 'mentions clinical classification' },
+  { pattern: /\b(tulburare|sindrom)\b/i, reason: 'uses clinical label wording' },
+  { pattern: /\bschizofren\w*\b/i, reason: 'mentions schizophrenia' },
+  { pattern: /\bbipolar\w*\b/i, reason: 'mentions bipolar disorder' },
+  { pattern: /\bborderline\b/i, reason: 'mentions borderline disorder' },
+  { pattern: /\bpsihoz\w*|\bpsihotic\w*\b/i, reason: 'mentions psychosis' },
+  { pattern: /\bptsd\b/i, reason: 'mentions PTSD' },
+  { pattern: /\badhd\b/i, reason: 'mentions ADHD' },
+  { pattern: /\bautis(m|t)\w*\b/i, reason: 'mentions autism' },
+  { pattern: /\bdement\w*|\balzheimer\b/i, reason: 'mentions dementia/Alzheimer' },
+  { pattern: /\bdepresie\b/i, reason: 'mentions depression as diagnosis' }
+];
+
+function containsDiagnosticLanguage(value: unknown) {
+  const text =
+    typeof value === 'string'
+      ? value
+      : Array.isArray(value)
+        ? value.filter((item) => typeof item === 'string').join(' ')
+        : value && typeof value === 'object'
+          ? Object.values(value as Record<string, unknown>)
+              .map((item) => (typeof item === 'string' ? item : Array.isArray(item) ? item.join(' ') : ''))
+              .join(' ')
+          : '';
+
+  const clean = text.trim();
+  if (!clean) return null;
+  for (const rule of DIAGNOSTIC_LANGUAGE_PATTERNS) {
+    if (rule.pattern.test(clean)) return rule.reason;
+  }
+  return null;
+}
+
 function parseAssessmentDate(value: string) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
@@ -89,6 +127,8 @@ function buildPsychosocialAIPrompt(input: {
   housingStatus: string;
   familyContactFrequency: string | null;
   institutionalizationHistory: string | null;
+  medicalConsent: boolean;
+  medicalConsentReference: string | null;
   knownDiseases: boolean | null | undefined;
   medicationInfo: string | null;
   limitations: string | null;
@@ -108,8 +148,9 @@ function buildPsychosocialAIPrompt(input: {
 }) {
   return `Esti asistent pentru fise psihosociale in centru de ingrijire.
 Scopul este ORIENTATIV de sprijin pentru personal.
-Nu formula diagnostice clinice. Nu folosi expresii de diagnostic (ex: "depresie severa").
-Foloseste formulare observationale si de suport.
+Nu formula diagnostice clinice si nu eticheta persoana cu tulburari/diagnostice (ICD/DSM).
+Evita termeni de diagnostic precum: depresie, tulburare, sindrom, schizofrenie, bipolar, psihoza, autism, ADHD, PTSD, dementa.
+Foloseste exclusiv formulari observationale si orientate spre sprijin (ex: "prezinta semne de...", "are nevoie de sustinere...", "beneficiaza de...").
 
 Date reale evaluare:
 - Beneficiar: ${input.internalName}
@@ -122,10 +163,11 @@ Date reale evaluare:
 - Locuire: ${input.housingStatus}
 - Contact familie: ${input.familyContactFrequency ?? 'nespecificat'}
 - Istoric institutionalizare: ${input.institutionalizationHistory ?? 'nespecificat'}
-- Boli cunoscute: ${boolText(input.knownDiseases)}
-- Medicatie: ${input.medicationInfo ?? 'nespecificat'}
-- Limitari: ${input.limitations ?? 'nespecificat'}
-- Evaluare psihologica anterioara: ${boolText(input.previousPsychEvaluation)}
+- Date medicale (cu acord): ${input.medicalConsent ? `da${input.medicalConsentReference ? ` (ref: ${input.medicalConsentReference})` : ''}` : 'nu'}
+- Boli cunoscute: ${input.medicalConsent ? boolText(input.knownDiseases) : 'omise (fara acord)'}
+- Medicatie: ${input.medicalConsent ? input.medicationInfo ?? 'nespecificat' : 'omisa (fara acord)'}
+- Limitari: ${input.medicalConsent ? input.limitations ?? 'nespecificat' : 'omise (fara acord)'}
+- Evaluare psihologica anterioara: ${input.medicalConsent ? boolText(input.previousPsychEvaluation) : 'omisa (fara acord)'}
 - Comunicare: ${input.communicationLevel}
 - Reactie la stres: ${input.stressReaction}
 - Relationare: ${input.relationshipStyle}
@@ -149,7 +191,7 @@ Reguli:
 - limba romana
 - max 7 puncte per lista
 - recomandari concrete pentru personal (ton calm, structura, evitarea conflictului, activitati recomandate cand relevant)
-- fara etichete de diagnostic.`;
+- fara etichete de diagnostic. Nu folosi cuvantul "diagnostic" si evita formularile clinice.`;
 }
 
 function serializeProfile(profile: {
@@ -162,6 +204,14 @@ function serializeProfile(profile: {
   responsiblePerson: string;
   familySupport: string;
   housingStatus: string;
+  familyContactFrequency: string | null;
+  institutionalizationHistory: string | null;
+  medicalConsent: boolean;
+  medicalConsentReference: string | null;
+  knownDiseases: boolean | null;
+  medicationInfo: string | null;
+  limitations: string | null;
+  previousPsychEvaluation: boolean | null;
   communicationLevel: string;
   stressReaction: string;
   relationshipStyle: string;
@@ -173,6 +223,8 @@ function serializeProfile(profile: {
   anger: boolean;
   apathy: boolean;
   hopeMotivation: boolean;
+  photoConsent: boolean;
+  photoReference: string | null;
   contextPersonal: string;
   emotionalProfile: string;
   mainNeeds: string[];
@@ -227,6 +279,17 @@ export async function POST(request: Request, { params }: Params) {
     const observations = sanitizeOptionalText(parsed.observations, 1000);
     const photoReference = sanitizeOptionalText(parsed.photoReference, 250);
     const signatureResponsible = sanitizeOptionalText(parsed.signatureResponsible, 120);
+    const medicalConsentReference = sanitizeOptionalText(parsed.medicalConsentReference, 250);
+
+    const medicalConsent = Boolean(parsed.medicalConsent);
+    const normalizedKnownDiseases = medicalConsent ? (parsed.knownDiseases ?? null) : null;
+    const normalizedMedicationInfo = medicalConsent ? medicationInfo : null;
+    const normalizedLimitations = medicalConsent ? limitations : null;
+    const normalizedPreviousPsychEvaluation = medicalConsent ? (parsed.previousPsychEvaluation ?? null) : null;
+    const normalizedMedicalConsentReference = medicalConsent ? medicalConsentReference : null;
+
+    const photoConsent = Boolean(parsed.photoConsent);
+    const normalizedPhotoReference = photoConsent ? photoReference : null;
 
     const normalizedInput = {
       internalName,
@@ -239,10 +302,12 @@ export async function POST(request: Request, { params }: Params) {
       housingStatus: parsed.housingStatus,
       familyContactFrequency,
       institutionalizationHistory,
-      knownDiseases: parsed.knownDiseases ?? null,
-      medicationInfo,
-      limitations,
-      previousPsychEvaluation: parsed.previousPsychEvaluation ?? null,
+      medicalConsent,
+      medicalConsentReference: normalizedMedicalConsentReference,
+      knownDiseases: normalizedKnownDiseases,
+      medicationInfo: normalizedMedicationInfo,
+      limitations: normalizedLimitations,
+      previousPsychEvaluation: normalizedPreviousPsychEvaluation,
       communicationLevel: parsed.communicationLevel,
       stressReaction: parsed.stressReaction,
       relationshipStyle: parsed.relationshipStyle,
@@ -268,7 +333,13 @@ export async function POST(request: Request, { params }: Params) {
     let generated = generatePsychosocialProfile(normalizedInput);
     let usedFallback = false;
     try {
-      generated = aiGeneratedSchema.parse(extractJsonObject(generatedText.text));
+      const parsedAi = aiGeneratedSchema.parse(extractJsonObject(generatedText.text));
+      const diagnosticReason = containsDiagnosticLanguage(parsedAi);
+      if (diagnosticReason) {
+        usedFallback = true;
+      } else {
+        generated = parsedAi;
+      }
     } catch {
       usedFallback = true;
     }
@@ -287,10 +358,12 @@ export async function POST(request: Request, { params }: Params) {
         housingStatus: parsed.housingStatus,
         familyContactFrequency,
         institutionalizationHistory,
-        knownDiseases: parsed.knownDiseases ?? null,
-        medicationInfo,
-        limitations,
-        previousPsychEvaluation: parsed.previousPsychEvaluation ?? null,
+        medicalConsent,
+        medicalConsentReference: normalizedMedicalConsentReference,
+        knownDiseases: normalizedKnownDiseases,
+        medicationInfo: normalizedMedicationInfo,
+        limitations: normalizedLimitations,
+        previousPsychEvaluation: normalizedPreviousPsychEvaluation,
         communicationLevel: parsed.communicationLevel,
         stressReaction: parsed.stressReaction,
         relationshipStyle: parsed.relationshipStyle,
@@ -302,8 +375,8 @@ export async function POST(request: Request, { params }: Params) {
         anger: parsed.anger,
         apathy: parsed.apathy,
         hopeMotivation: parsed.hopeMotivation,
-        photoConsent: parsed.photoConsent,
-        photoReference,
+        photoConsent,
+        photoReference: normalizedPhotoReference,
         contextPersonal: generated.contextPersonal,
         emotionalProfile: generated.emotionalProfile,
         mainNeeds: generated.mainNeeds,
@@ -312,6 +385,25 @@ export async function POST(request: Request, { params }: Params) {
         supportPlan: generated.supportPlan,
         observations,
         signatureResponsible
+      }
+    });
+
+    await logAudit({
+      workspaceId: params.workspaceId,
+      actorId: user.id,
+      action: AuditAction.PSYCHOSOCIAL_PROFILE_CREATED,
+      metadata: {
+        psychosocialProfileId: profile.id,
+        internalName: profile.internalName,
+        ai: {
+          provider: parsed.provider,
+          model: generatedText.model,
+          fallbackRulesUsed: usedFallback
+        },
+        consents: {
+          medicalConsent,
+          photoConsent
+        }
       }
     });
 

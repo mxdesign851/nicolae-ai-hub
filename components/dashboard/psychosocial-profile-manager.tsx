@@ -12,6 +12,8 @@ type PsychosocialProfile = {
   responsiblePerson: string;
   familySupport: 'DA' | 'NU' | 'PARTIAL';
   housingStatus: 'FARA_ADAPOST' | 'CENTRU' | 'FAMILIE' | 'ALTA';
+  medicalConsent: boolean;
+  medicalConsentReference: string | null;
   communicationLevel: 'MIC' | 'MEDIU' | 'BUN';
   stressReaction: 'CALM' | 'AGITAT' | 'CRIZE';
   relationshipStyle: 'RETRAS' | 'SOCIABIL' | 'AGRESIV';
@@ -23,6 +25,8 @@ type PsychosocialProfile = {
   anger: boolean;
   apathy: boolean;
   hopeMotivation: boolean;
+  photoConsent: boolean;
+  photoReference: string | null;
   contextPersonal: string;
   emotionalProfile: string;
   mainNeeds: string[];
@@ -119,6 +123,8 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
     housingStatus: 'CENTRU' as const,
     familyContactFrequency: '',
     institutionalizationHistory: '',
+    medicalConsent: false,
+    medicalConsentReference: '',
     knownDiseases: 'unknown' as const,
     medicationInfo: '',
     limitations: '',
@@ -177,6 +183,8 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
           housingStatus: form.housingStatus,
           familyContactFrequency: form.familyContactFrequency || null,
           institutionalizationHistory: form.institutionalizationHistory || null,
+          medicalConsent: form.medicalConsent,
+          medicalConsentReference: form.medicalConsentReference || null,
           knownDiseases: parseTriState(form.knownDiseases),
           medicationInfo: form.medicationInfo || null,
           limitations: form.limitations || null,
@@ -224,6 +232,8 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
           responsiblePerson: '',
           familyContactFrequency: '',
           institutionalizationHistory: '',
+          medicalConsent: false,
+          medicalConsentReference: '',
           medicationInfo: '',
           limitations: '',
           photoReference: '',
@@ -241,7 +251,7 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
   return (
     <div className="space-y-5">
       <section className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
-        Scopul modulului este orientativ de sprijin, monitorizare si recomandari pentru personal. Nu emite diagnostice medicale.
+        Scopul modulului este orientativ de sprijin, monitorizare si recomandari pentru personal. Nu emite diagnostice medicale si nu eticheteaza clinic beneficiarul.
       </section>
       <section className="rounded-lg border border-slate-700 bg-slate-950/60 px-4 py-3 text-sm">
         <div className="flex flex-wrap items-center gap-3">
@@ -325,8 +335,47 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
               />
             </div>
 
+            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.medicalConsent}
+                  onChange={(event) => {
+                    const next = event.target.checked;
+                    setForm((prev) => ({
+                      ...prev,
+                      medicalConsent: next,
+                      medicalConsentReference: next ? prev.medicalConsentReference : '',
+                      knownDiseases: next ? prev.knownDiseases : 'unknown',
+                      previousPsychEvaluation: next ? prev.previousPsychEvaluation : 'unknown',
+                      medicationInfo: next ? prev.medicationInfo : '',
+                      limitations: next ? prev.limitations : ''
+                    }));
+                  }}
+                />
+                Acord pentru includerea datelor medicale (optional, GDPR)
+              </label>
+              <div className="mt-2 grid gap-3 md:grid-cols-2">
+                <input
+                  className="input"
+                  placeholder="Referinta acord (optional)"
+                  value={form.medicalConsentReference}
+                  disabled={!form.medicalConsent}
+                  onChange={(event) => setForm((prev) => ({ ...prev, medicalConsentReference: event.target.value }))}
+                />
+                <p className="text-xs text-slate-400">
+                  Daca nu exista acord, campurile medicale sunt omise din profil si PDF.
+                </p>
+              </div>
+            </div>
+
             <div className="grid gap-3 md:grid-cols-2">
-              <select className="input" value={form.knownDiseases} onChange={(event) => setForm((prev) => ({ ...prev, knownDiseases: event.target.value as typeof prev.knownDiseases }))}>
+              <select
+                className="input"
+                value={form.knownDiseases}
+                disabled={!form.medicalConsent}
+                onChange={(event) => setForm((prev) => ({ ...prev, knownDiseases: event.target.value as typeof prev.knownDiseases }))}
+              >
                 {yesNoUnknownOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     Boli cunoscute: {option.label}
@@ -336,6 +385,7 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
               <select
                 className="input"
                 value={form.previousPsychEvaluation}
+                disabled={!form.medicalConsent}
                 onChange={(event) => setForm((prev) => ({ ...prev, previousPsychEvaluation: event.target.value as typeof prev.previousPsychEvaluation }))}
               >
                 {yesNoUnknownOptions.map((option) => (
@@ -348,12 +398,14 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
                 className="input"
                 placeholder="Medicatie (optional)"
                 value={form.medicationInfo}
+                disabled={!form.medicalConsent}
                 onChange={(event) => setForm((prev) => ({ ...prev, medicationInfo: event.target.value }))}
               />
               <input
                 className="input"
                 placeholder="Limitari / handicap"
                 value={form.limitations}
+                disabled={!form.medicalConsent}
                 onChange={(event) => setForm((prev) => ({ ...prev, limitations: event.target.value }))}
               />
             </div>
@@ -447,7 +499,14 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
                 <input
                   type="checkbox"
                   checked={form.photoConsent}
-                  onChange={(event) => setForm((prev) => ({ ...prev, photoConsent: event.target.checked }))}
+                  onChange={(event) => {
+                    const next = event.target.checked;
+                    setForm((prev) => ({
+                      ...prev,
+                      photoConsent: next,
+                      photoReference: next ? prev.photoReference : ''
+                    }));
+                  }}
                 />
                 Consimtamant legal pentru poza
               </label>
@@ -455,9 +514,13 @@ export function PsychosocialProfileManager({ workspaceId, initialProfiles }: Pro
                 className="input"
                 placeholder="Referinta poza (optional)"
                 value={form.photoReference}
+                disabled={!form.photoConsent}
                 onChange={(event) => setForm((prev) => ({ ...prev, photoReference: event.target.value }))}
               />
             </div>
+            <p className="text-xs text-slate-400">
+              Poza este doar pentru identificare. Nu se foloseste pentru analiza faciala sau inferente medicale.
+            </p>
 
             <textarea
               className="input min-h-[95px]"
