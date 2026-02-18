@@ -1,6 +1,7 @@
 import { Role } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { requireApiUserOrThrow } from '@/lib/api-auth';
+import { logAudit } from '@/lib/audit';
 import { jsonError, HttpError } from '@/lib/http';
 import { createSinglePagePdf } from '@/lib/pdf';
 import { prisma } from '@/lib/prisma';
@@ -45,31 +46,36 @@ export async function GET(_: Request, { params }: Params) {
           `Beneficiar: ${profile.internalName} | Varsta: ${profile.age} | Sex: ${profile.sex}`,
           `Locatie/Centru: ${profile.locationCenter}`,
           `Data evaluarii: ${profile.assessmentDate.toLocaleDateString('ro-RO')}`,
-          `Responsabil: ${profile.responsiblePerson}`
+          `Responsabil: ${profile.responsiblePerson}`,
+          `Poza identificare: ${
+            profile.photoConsent ? profile.photoReference || 'Consimtamant activ (fara referinta salvata)' : 'Nu este inclusa (fara consimtamant legal)'
+          }`
         ]
       },
       {
-        title: 'Rezumat social si medical',
+        title: 'Rezumat social',
         lines: [
           `Familie: ${FAMILY_SUPPORT_LABELS[profile.familySupport]} | Locuire: ${HOUSING_STATUS_LABELS[profile.housingStatus]}`,
           `Contact cu familia: ${profile.familyContactFrequency || 'Nespecificat'}`,
-          `Istoric institutionalizare: ${profile.institutionalizationHistory || 'Nespecificat'}`,
-          `Boli cunoscute: ${boolLabel(profile.knownDiseases)} | Evaluare psihologica anterioara: ${boolLabel(profile.previousPsychEvaluation)}`,
-          `Tratament/medicatie: ${profile.medicationInfo || 'Nespecificat'}`,
-          `Limitari/handicap: ${profile.limitations || 'Nespecificat'}`
+          `Istoric institutionalizare: ${profile.institutionalizationHistory || 'Nespecificat'}`
         ]
       },
       {
-        title: 'Profil emotional orientativ',
+        title: 'Date medicale optionale (cu acord)',
+        lines: profile.medicalConsent
+          ? [
+              `Acord medical: Da`,
+              `Boli cunoscute: ${boolLabel(profile.knownDiseases)} | Evaluare psihologica anterioara: ${boolLabel(profile.previousPsychEvaluation)}`,
+              `Tratament/medicatie: ${profile.medicationInfo || 'Nespecificat'}`,
+              `Limitari/handicap: ${profile.limitations || 'Nespecificat'}`
+            ]
+          : ['Acord medical: Nu. Datele medicale optionale nu au fost incluse in evaluare.']
+      },
+      {
+        title: 'Profil emotional',
         lines: [
           profile.contextPersonal,
           profile.emotionalProfile,
-          `Comunicare: ${COMMUNICATION_LABELS[profile.communicationLevel]} | Stres: ${STRESS_LABELS[profile.stressReaction]} | Relationare: ${
-            RELATIONSHIP_LABELS[profile.relationshipStyle]
-          }`,
-          `Autonomie: ${AUTONOMY_LABELS[profile.autonomyLevel]} | Somn: ${SLEEP_LABELS[profile.sleepQuality]} | Apetit: ${
-            APPETITE_LABELS[profile.appetite]
-          }`,
           `Indicatori emotionali observati: tristete ${boolLabel(profile.sadnessFrequent)}, anxietate ${boolLabel(
             profile.anxiety
           )}, furie ${boolLabel(profile.anger)}, apatie ${boolLabel(profile.apathy)}, speranta/motivatie ${boolLabel(
@@ -78,15 +84,34 @@ export async function GET(_: Request, { params }: Params) {
         ]
       },
       {
+        title: 'Nevoi principale si riscuri',
+        lines: [
+          `Comunicare: ${COMMUNICATION_LABELS[profile.communicationLevel]} | Stres: ${STRESS_LABELS[profile.stressReaction]} | Relationare: ${
+            RELATIONSHIP_LABELS[profile.relationshipStyle]
+          }`,
+          `Autonomie: ${AUTONOMY_LABELS[profile.autonomyLevel]} | Somn: ${SLEEP_LABELS[profile.sleepQuality]} | Apetit: ${
+            APPETITE_LABELS[profile.appetite]
+          }`,
+          ...(profile.mainNeeds.length ? profile.mainNeeds.map((line) => `Nevoie: ${line}`) : ['Nevoi: Nespecificate']),
+          ...(profile.risks.length ? profile.risks.map((line) => `Risc: ${line}`) : ['Riscuri: Nespecificate'])
+        ]
+      },
+      {
         title: 'Recomandari pentru personal',
         lines: profile.staffRecommendations.length ? profile.staffRecommendations.map((line) => `- ${line}`) : ['- Fara recomandari.']
       },
       {
-        title: 'Plan de sprijin / observatii / semnatura',
+        title: 'Plan de sprijin',
+        lines: profile.supportPlan.length ? profile.supportPlan.map((line) => `- ${line}`) : ['- Fara plan definit.']
+      },
+      {
+        title: 'Observatii',
+        lines: [`${profile.observations || 'Nespecificat'}`]
+      },
+      {
+        title: 'Semnatura responsabil',
         lines: [
-          ...(profile.supportPlan.length ? profile.supportPlan.map((line) => `- ${line}`) : ['- Fara plan definit.']),
-          `Observatii: ${profile.observations || 'Nespecificat'}`,
-          `Semnatura responsabil: ${profile.signatureResponsible || profile.responsiblePerson}`
+          `${profile.signatureResponsible || profile.responsiblePerson}`
         ]
       }
     ];
@@ -97,6 +122,16 @@ export async function GET(_: Request, { params }: Params) {
         'Document de sprijin pentru echipa. Nu reprezinta diagnostic medical si nu inlocuieste evaluarea clinica specializata.',
       sections,
       footerNote: `Generat la ${new Date().toLocaleString('ro-RO')} din aplicatia interna.`
+    });
+
+    await logAudit({
+      workspaceId: params.workspaceId,
+      actorId: user.id,
+      action: 'PSYCHOSOCIAL_PROFILE_PDF_EXPORTED',
+      metadata: {
+        profileId: profile.id,
+        internalName: profile.internalName
+      }
     });
 
     return new NextResponse(Buffer.from(pdfBytes), {

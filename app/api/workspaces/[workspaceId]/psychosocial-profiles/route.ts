@@ -2,6 +2,7 @@ import { Role } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireApiUserOrThrow } from '@/lib/api-auth';
+import { logAudit } from '@/lib/audit';
 import { extractJsonObject, generateText, Provider } from '@/lib/ai';
 import { jsonError, HttpError } from '@/lib/http';
 import {
@@ -13,7 +14,8 @@ import {
   RELATIONSHIP_STYLES,
   SLEEP_QUALITIES,
   STRESS_REACTIONS,
-  generatePsychosocialProfile
+  generatePsychosocialProfile,
+  profileContainsDiagnosticLanguage
 } from '@/lib/psychosocial';
 import { prisma } from '@/lib/prisma';
 import { sanitizeOptionalText, sanitizeText } from '@/lib/sanitize';
@@ -31,6 +33,7 @@ const psychosocialSchema = z.object({
   locationCenter: z.string().min(2).max(120),
   assessmentDate: z.string(),
   responsiblePerson: z.string().min(2).max(120),
+  medicalConsent: z.boolean().default(false),
   familySupport: z.enum(FAMILY_SUPPORT_LEVELS),
   housingStatus: z.enum(HOUSING_STATUSES),
   familyContactFrequency: z.string().max(160).optional().nullable(),
@@ -85,6 +88,7 @@ function buildPsychosocialAIPrompt(input: {
   locationCenter: string;
   assessmentDate: Date;
   responsiblePerson: string;
+  medicalConsent: boolean;
   familySupport: string;
   housingStatus: string;
   familyContactFrequency: string | null;
@@ -118,6 +122,7 @@ Date reale evaluare:
 - Locatie/Centru: ${input.locationCenter}
 - Data evaluarii: ${input.assessmentDate.toISOString()}
 - Responsabil: ${input.responsiblePerson}
+- Acord date medicale optionale: ${input.medicalConsent ? 'da' : 'nu'}
 - Familie: ${input.familySupport}
 - Locuire: ${input.housingStatus}
 - Contact familie: ${input.familyContactFrequency ?? 'nespecificat'}
@@ -149,7 +154,8 @@ Reguli:
 - limba romana
 - max 7 puncte per lista
 - recomandari concrete pentru personal (ton calm, structura, evitarea conflictului, activitati recomandate cand relevant)
-- fara etichete de diagnostic.`;
+- fara etichete de diagnostic
+- daca acord date medicale optionale = nu, mentioneaza explicit doar ca datele medicale nu au fost incluse in evaluarea curenta.`;
 }
 
 function serializeProfile(profile: {
@@ -222,11 +228,17 @@ export async function POST(request: Request, { params }: Params) {
     const responsiblePerson = sanitizeText(parsed.responsiblePerson, 120);
     const familyContactFrequency = sanitizeOptionalText(parsed.familyContactFrequency, 160);
     const institutionalizationHistory = sanitizeOptionalText(parsed.institutionalizationHistory, 500);
-    const medicationInfo = sanitizeOptionalText(parsed.medicationInfo, 500);
-    const limitations = sanitizeOptionalText(parsed.limitations, 500);
+    const medicationInfo = parsed.medicalConsent ? sanitizeOptionalText(parsed.medicationInfo, 500) : null;
+    const limitations = parsed.medicalConsent ? sanitizeOptionalText(parsed.limitations, 500) : null;
     const observations = sanitizeOptionalText(parsed.observations, 1000);
     const photoReference = sanitizeOptionalText(parsed.photoReference, 250);
     const signatureResponsible = sanitizeOptionalText(parsed.signatureResponsible, 120);
+    const knownDiseases = parsed.medicalConsent ? parsed.knownDiseases ?? null : null;
+    const previousPsychEvaluation = parsed.medicalConsent ? parsed.previousPsychEvaluation ?? null : null;
+
+    if (photoReference && !parsed.photoConsent) {
+      throw new HttpError(400, 'Poza poate fi salvata doar cu consimtamant legal explicit');
+    }
 
     const normalizedInput = {
       internalName,
@@ -235,14 +247,15 @@ export async function POST(request: Request, { params }: Params) {
       locationCenter,
       assessmentDate,
       responsiblePerson,
+      medicalConsent: parsed.medicalConsent,
       familySupport: parsed.familySupport,
       housingStatus: parsed.housingStatus,
       familyContactFrequency,
       institutionalizationHistory,
-      knownDiseases: parsed.knownDiseases ?? null,
+      knownDiseases,
       medicationInfo,
       limitations,
-      previousPsychEvaluation: parsed.previousPsychEvaluation ?? null,
+      previousPsychEvaluation,
       communicationLevel: parsed.communicationLevel,
       stressReaction: parsed.stressReaction,
       relationshipStyle: parsed.relationshipStyle,
@@ -265,10 +278,15 @@ export async function POST(request: Request, { params }: Params) {
       temperature: 0.2
     });
 
-    let generated = generatePsychosocialProfile(normalizedInput);
+    const fallbackGenerated = generatePsychosocialProfile(normalizedInput);
+    let generated = fallbackGenerated;
     let usedFallback = false;
     try {
-      generated = aiGeneratedSchema.parse(extractJsonObject(generatedText.text));
+      const parsedAi = aiGeneratedSchema.parse(extractJsonObject(generatedText.text));
+      if (profileContainsDiagnosticLanguage(parsedAi)) {
+        throw new Error('AI output contains diagnostic language');
+      }
+      generated = parsedAi;
     } catch {
       usedFallback = true;
     }
@@ -283,14 +301,15 @@ export async function POST(request: Request, { params }: Params) {
         locationCenter,
         assessmentDate,
         responsiblePerson,
+        medicalConsent: parsed.medicalConsent,
         familySupport: parsed.familySupport,
         housingStatus: parsed.housingStatus,
         familyContactFrequency,
         institutionalizationHistory,
-        knownDiseases: parsed.knownDiseases ?? null,
+        knownDiseases,
         medicationInfo,
         limitations,
-        previousPsychEvaluation: parsed.previousPsychEvaluation ?? null,
+        previousPsychEvaluation,
         communicationLevel: parsed.communicationLevel,
         stressReaction: parsed.stressReaction,
         relationshipStyle: parsed.relationshipStyle,
@@ -312,6 +331,16 @@ export async function POST(request: Request, { params }: Params) {
         supportPlan: generated.supportPlan,
         observations,
         signatureResponsible
+      }
+    });
+
+    await logAudit({
+      workspaceId: params.workspaceId,
+      actorId: user.id,
+      action: 'PSYCHOSOCIAL_PROFILE_CREATED',
+      metadata: {
+        profileId: profile.id,
+        internalName: profile.internalName
       }
     });
 

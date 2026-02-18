@@ -70,6 +70,7 @@ export type PsychosocialInput = {
   locationCenter: string;
   assessmentDate: Date;
   responsiblePerson: string;
+  medicalConsent: boolean;
   familySupport: FamilySupportLevel;
   housingStatus: HousingStatus;
   familyContactFrequency?: string | null;
@@ -101,6 +102,16 @@ export type PsychosocialGeneratedProfile = {
   supportPlan: string[];
 };
 
+const DIAGNOSTIC_LANGUAGE_PATTERNS = [
+  /\bdiagnostic(?:at|ata|ate|ati|ului|elor)?\b/i,
+  /\bare\s+diagnosticat(?:a)?\s+cu\b/i,
+  /\bsufer\w*\s+de\b/i,
+  /\bdepresie\s+sever\w*\b/i,
+  /\bepisod\s+depresiv\b/i,
+  /\btulburare\s+(?:de|anxio|depresiv|bipolar|psihotic)\w*\b/i,
+  /\bschizofren\w*\b/i
+];
+
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat('ro-RO', { dateStyle: 'medium' }).format(date);
 }
@@ -128,7 +139,8 @@ export function generatePsychosocialProfile(input: PsychosocialInput): Psychosoc
   const contextParts: string[] = [
     `${input.internalName}, ${input.age} ani, evaluat la data de ${formatDate(input.assessmentDate)} in ${input.locationCenter}.`,
     `Suport familial: ${FAMILY_SUPPORT_LABELS[input.familySupport]}.`,
-    `Stare locativa: ${HOUSING_STATUS_LABELS[input.housingStatus]}.`
+    `Stare locativa: ${HOUSING_STATUS_LABELS[input.housingStatus]}.`,
+    `Persoana responsabila: ${input.responsiblePerson}.`
   ];
 
   if (input.familyContactFrequency) {
@@ -138,7 +150,9 @@ export function generatePsychosocialProfile(input: PsychosocialInput): Psychosoc
     contextParts.push(`Istoric institutionalizare: ${input.institutionalizationHistory}.`);
   }
 
-  if (input.knownDiseases === true) {
+  if (!input.medicalConsent) {
+    contextParts.push('Datele medicale optionale nu au fost incluse in aceasta evaluare (fara acord).');
+  } else if (input.knownDiseases === true) {
     contextParts.push('Exista afectiuni medicale cunoscute care necesita urmarire.');
     needs.add('monitorizare medicala si aderenta la tratament');
     supportPlan.add('revizuire medicala periodica cu acord informat');
@@ -148,11 +162,11 @@ export function generatePsychosocialProfile(input: PsychosocialInput): Psychosoc
     contextParts.push('Datele medicale sunt partiale si necesita completare cu acord.');
   }
 
-  if (input.medicationInfo) {
+  if (input.medicalConsent && input.medicationInfo) {
     contextParts.push(`Tratament mentionat: ${input.medicationInfo}.`);
     needs.add('organizare consecventa a administrarii tratamentului');
   }
-  if (input.limitations) {
+  if (input.medicalConsent && input.limitations) {
     contextParts.push(`Limitari functionale: ${input.limitations}.`);
     needs.add('sprijin pentru autonomie functionala');
   }
@@ -198,7 +212,7 @@ export function generatePsychosocialProfile(input: PsychosocialInput): Psychosoc
   const emotionalLoadScore = buildEmotionalLoadScore(input);
   if (input.sadnessFrequent || input.apathy || input.anxiety) {
     needs.add('consiliere emotionala regulata');
-    risks.add('risc de retragere si simptome depresive');
+    risks.add('risc de retragere emotionala si reducerea implicarii');
   }
   if (input.anger) {
     recommendations.add('validati emotiile inainte de corectarea comportamentului');
@@ -236,4 +250,21 @@ export function generatePsychosocialProfile(input: PsychosocialInput): Psychosoc
     staffRecommendations: Array.from(recommendations).slice(0, 7),
     supportPlan: Array.from(supportPlan).slice(0, 6)
   };
+}
+
+function hasDiagnosticLanguage(text: string) {
+  return DIAGNOSTIC_LANGUAGE_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+export function profileContainsDiagnosticLanguage(profile: PsychosocialGeneratedProfile) {
+  const combined = [
+    profile.contextPersonal,
+    profile.emotionalProfile,
+    ...profile.mainNeeds,
+    ...profile.risks,
+    ...profile.staffRecommendations,
+    ...profile.supportPlan
+  ].join(' ');
+
+  return hasDiagnosticLanguage(combined);
 }

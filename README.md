@@ -32,6 +32,12 @@ ReplyZen helps businesses and agencies manage imported reviews (Google/Facebook/
 - Stripe + PayPal subscription routes + webhook handlers
 - Payment-failure grace handling and auto-downgrade to Free
 - Privacy and Terms template pages
+- Psychosocial beneficiary profiling module (orientative support, no clinical diagnosis):
+  - structured intake sections (A-F: basic/social/medical behavior/emotional/photo)
+  - explicit medical/photo consent handling
+  - AI-generated support profile with diagnostic-language safety fallback
+  - one-page archival PDF for case file
+  - audit logs for profile creation and PDF export
 
 ---
 

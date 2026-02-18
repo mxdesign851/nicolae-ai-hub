@@ -146,6 +146,8 @@ enum AuditAction {
   MEMBER_ROLE_UPDATED
   MEMBER_REMOVED
   SUBSCRIPTION_UPDATED
+  PSYCHOSOCIAL_PROFILE_CREATED
+  PSYCHOSOCIAL_PROFILE_PDF_EXPORTED
 }
 
 model User {
@@ -411,6 +413,7 @@ model PsychosocialProfile {
   locationCenter            String
   assessmentDate            DateTime
   responsiblePerson         String
+  medicalConsent            Boolean            @default(false)
   familySupport             FamilySupportLevel
   housingStatus             HousingStatus
   familyContactFrequency    String?
