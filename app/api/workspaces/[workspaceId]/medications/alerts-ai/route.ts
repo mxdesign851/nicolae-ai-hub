@@ -62,7 +62,7 @@ function buildFallbackDigest(input: {
   phoneNumber: string | null;
   alerts: ReturnType<typeof calculateMedicationAlerts>;
   projected: ReturnType<typeof mapPrismaMedicationItem>[];
-}) {
+}): z.infer<typeof digestSchema> {
   const missingNow = input.alerts
     .filter((alert) => alert.type === 'OUT_OF_STOCK' || alert.type === 'LOW_STOCK')
     .slice(0, 12)
@@ -89,7 +89,7 @@ function buildFallbackDigest(input: {
       if (days < 0 || days > input.horizonDays) return null;
       return {
         name: item.name,
-        runoutAt: runoutAt.toLocaleDateString('ro-RO'),
+        runoutAt: runoutAt ? runoutAt.toLocaleDateString('ro-RO') : null,
         reason: `Consum estimat ${item.dailyUsage ?? '-'} ${item.unit}/zi; epuizare estimata in ${days} zile.`,
         urgency: (days <= 7 ? 'high' : days <= 14 ? 'medium' : 'low') as 'high' | 'medium' | 'low'
       };
